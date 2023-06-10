@@ -1,0 +1,29 @@
+{
+    "folders": [
+		{
+			"path": "../../../../../Users/dsagman/Code"
+		},
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../../Users/dsagman/Code/github"
+		}
+	],
+    "settings": {
+        "jupyter.jupyterServerType": "local"
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [{
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Launch Program",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "/Volumes/shared_files/david_programs/kata/sumpositive.js",
+            "__workspaceFolder": "/Volumes/shared_files/david_programs/kata"
+        }]
+    }
+}
