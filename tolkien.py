@@ -9,8 +9,8 @@ def calculate_cart_total(contents):
     price = 0
     for item in contents:
         results[item] += 1  
+    
     num_books = [v for k, v in results.items() if v > 0]
-
     while True:
         if len(num_books) == 4:
             price += 32          
@@ -25,9 +25,6 @@ def calculate_cart_total(contents):
         num_books = [v for k, v in results.items() if v > 0]
         if len(num_books) == 0:
             break
-
-    ic(results)
-    ic(num_books)
     return price
 
 
