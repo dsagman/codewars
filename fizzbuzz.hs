@@ -1,16 +1,33 @@
 main::IO()
 main = print $ fizzbuzz [] 0 100
 
+
+zzString :: [(Int, String)] 
+zzString = [ (3, "fizz"), (5, "buzz")]
+
 fizzbuzz :: [String] -> Int -> Int -> [String]
-fizzbuzz _ i n = map fizzbuzz' [i .. n]
-    where fizzbuzz' n
-            | n `mod` 15 == 0 = "fizzbuzz"
-            | n `mod` 3 == 0 = "fizz"
-            | n `mod` 5 == 0 = "buzz"
-            | otherwise = show n
+fizzbuzz _ i n = map fizzbuzz' [i .. n] 
+    where fizzbuzz' x = case [ s | (n, s) <- zzString, x `mod` n == 0 ] of
+            [] -> show x
+            xs -> concat xs 
 
 -- we don't need the empty accumulator
 -- could be fizzbuzz :: Int -> Int -> [String]
+
+-- generalized so we can have any number of replacements
+-- for example
+-- zzString [ (3, "fizz"), (5, "buzz"), (2, "muzz")]
+
+
+-- older versions
+
+-- fizzbuzz :: [String] -> Int -> Int -> [String]
+-- fizzbuzz _ i n = map fizzbuzz' [i .. n]
+--     where fizzbuzz' n
+--             | n `mod` 15 == 0 = "fizzbuzz"
+--             | n `mod` 3 == 0 = "fizz"
+--             | n `mod` 5 == 0 = "buzz"
+--             | otherwise = show n
 
 -- fizzbuzz :: [String] -> Int -> Int -> [String]
 -- fizzbuzz acc i n
