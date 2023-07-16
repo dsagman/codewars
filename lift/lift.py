@@ -22,7 +22,7 @@ class Dinglemouse(object):
         direction = 1
         floors = [0]
         in_lift = []
-        calls = self.get_calls(queue, 1)
+        calls = self.get_calls(queue, direction)
         while True:
             cur_floor = calls[0]
             floors.append(cur_floor)
