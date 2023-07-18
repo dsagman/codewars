@@ -7,11 +7,17 @@ class Dinglemouse(object):
         self.queue = queues
         self.capacity = capacity
         
-    def get_calls(self, q, direction):
+    def get_calls(self, queue, direction):
         calls = []
-        for i, q in enumerate(q[::direction]):
+        for i, q in enumerate(queue[::direction]):
             if len(q) > 0:
-                calls.append(i)
+                if direction == 1:
+                    # need to check that at least one request is in the direction of travel
+                    if max(q) > i:
+                        calls.append(i)
+                else:
+                    if min(q) < i:
+                        calls.append(len(queue) - i - 1)
         return calls
 
     def theLift(self):
@@ -24,30 +30,36 @@ class Dinglemouse(object):
         in_lift = []
         calls = self.get_calls(queue, direction)
         while True:
+            if len(calls) == 0:
+                # reverse direction
+                direction = -direction
+                calls = self.get_calls(queue, direction)
+                if len(calls) == 0:
+                    break
             cur_floor = calls[0]
             floors.append(cur_floor)
             # add people into lift if waiting
             if len(queue[cur_floor]) > 0:
                 for p in queue[cur_floor]:
-                    if p > cur_floor:
+                    if (direction == 1 and p > cur_floor) or (direction == -1 and p < cur_floor):
                         in_lift.append(p)
                         calls.append(p)
-                for p in in_lift:
-                    queue[cur_floor].remove(p)
+
+                queue[cur_floor] = [p for p in queue[cur_floor] if p not in in_lift]
             # remove people from lift if at their floor
             in_lift = [p for p in in_lift if p != cur_floor]
             # sort and dedupe calls
-            calls = sorted(set(calls))
-            # remove first call
+            if direction == 1:
+                calls = sorted(set(calls))
+            else:
+                calls = sorted(set(calls), reverse=True)
+            # remove most recent call
             calls.pop(0)
-            if len(calls) == 0:
-                # reverse direction
-                break
+            ic(queue)
+            ic(in_lift)
+            ic(calls)
             
         floors.append(0)
-        ic(queue)
-        ic(in_lift)
-        ic(calls)
         return floors
     
 # start at ground going up
@@ -64,9 +76,10 @@ tests = [[ ( (),   (),    (5,5,5), (),   (),    (),    () ),     [0, 2, 5, 0]   
          [ ( (),   (3,),  (4,),    (),   (5,),  (),    () ),     [0, 1, 2, 3, 4, 5, 0] ],
          [ ( (),   (0,),  (),      (),   (2,),  (3,),  () ),     [0, 5, 4, 3, 2, 1, 0] ]]
   
-# for queues, answer in tests:
-#     lift = Dinglemouse(queues, 5)
-#     test.assert_equals(lift.theLift(), answer)
+for queues, answer in tests:
+    lift = Dinglemouse(queues, 5)
+    ic("end")
+    test.assert_equals(lift.theLift(), answer)
 
-lift = Dinglemouse(tests[0][0],5)
-ic(lift.theLift())
+# lift = Dinglemouse(tests[0][0],5)
+# ic(lift.theLift())
