@@ -1,5 +1,25 @@
 import codewars_test as test
 from icecream import ic
+import builtins
+import functools
+
+debug = False
+
+def conditional_print(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if debug:
+            return func(*args, **kwargs)
+        else:
+            original_print = builtins.print
+            builtins.print = lambda *args, **kwargs: None
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                builtins.print = original_print
+            return result
+    return wrapper
+
 
 class Dinglemouse(object):
 
@@ -7,7 +27,6 @@ class Dinglemouse(object):
         self.queue = queues
         self.capacity = capacity
 
-        
     def get_calls(self, queue, direction):
         calls = []
         for i, q in enumerate(queue[::direction]):
@@ -18,7 +37,6 @@ class Dinglemouse(object):
             ic(i, j, q, direction, calls)
             if len(q) > 0:
                 # need to check that at least one request is in the direction of travel
-
                 if direction == 1:
                     if max(q) > j:
                         calls.append(j)
@@ -33,15 +51,14 @@ class Dinglemouse(object):
             return sorted(set(calls))
         return sorted(set(calls), reverse=True)
   
-
+    @conditional_print  
     def theLift(self):
         queue = [list(q) for q in self.queue]
         capacity = self.capacity
         print("Let the elevator ride begin!")
-        ic(queue)
-        ic(capacity)
+        print("Queue is: ", queue, "Capacity is: ", capacity)
         direction = 1
-        floors = [0]
+        floors = []
         in_lift = []
         calls = sorted(set(self.get_calls(queue, direction)))
         while True:
@@ -78,6 +95,8 @@ class Dinglemouse(object):
             calls.pop(0)
         if floors[-1] != 0:
             floors.append(0)
+        if floors[0] != 0:
+            floors.insert(0, 0)
         print("Floors visited", floors)
         return floors
     
@@ -90,10 +109,15 @@ class Dinglemouse(object):
 
 
 # Floors:    G     1      2        3     4      5      6         Answers:
-tests = [[ ( (),   (),    (5,5,5), (),   (),    (),    () ),     [0, 2, 5, 0]          ],
-         [ ( (),   (),    (1,1),   (),   (),    (),    () ),     [0, 2, 1, 0]          ],
-         [ ( (),   (3,),  (4,),    (),   (5,),  (),    () ),     [0, 1, 2, 3, 4, 5, 0] ],
-         [ ( (),   (0,),  (),      (),   (2,),  (3,),  () ),     [0, 5, 4, 3, 2, 1, 0] ]]
+# tests = [[ ( (),   (),    (5,5,5), (),   (),    (),    () ),     [0, 2, 5, 0]          ],
+#          [ ( (),   (),    (1,1),   (),   (),    (),    () ),     [0, 2, 1, 0]          ],
+#          [ ( (),   (3,),  (4,),    (),   (5,),  (),    () ),     [0, 1, 2, 3, 4, 5, 0] ],
+#          [ ( (),   (0,),  (),      (),   (2,),  (3,),  () ),     [0, 5, 4, 3, 2, 1, 0] ]]
+
+tests = [[[[3, 3, 3, 3, 3, 3], [], [], [], [], [], []], [0, 3, 0, 3, 0]],
+         [[[], [0, 0, 0, 6], [], [], [], [6, 6, 0, 0, 0, 6], []], [0, 1, 5, 6, 5, 1, 0, 1, 0] ]]
+
+# [[], [], [4, 4, 4, 4], [], [2, 2, 2, 2], [], []], capacity 2 should equal [0, 2, 4, 2, 4, 2, 0]
 
 
 # tests =   [[ ( (),   (0,),  (),      (),   (2,),  (3,),  () ),     [0, 5, 4, 3, 2, 1, 0] ]]
@@ -101,7 +125,6 @@ tests = [[ ( (),   (),    (5,5,5), (),   (),    (),    () ),     [0, 2, 5, 0]   
   
 for queues, answer in tests:
     lift = Dinglemouse(queues, 5)
-    ic("end")
     test.assert_equals(lift.theLift(), answer)
 
 # lift = Dinglemouse(tests[0][0],5)
