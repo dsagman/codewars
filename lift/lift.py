@@ -43,7 +43,6 @@ class Dinglemouse(object):
                 else:
                     if min(q) < j:
                         calls.append(j)
-                    
         return calls
     
     def sort_calls(self, calls, direction):
@@ -60,10 +59,9 @@ class Dinglemouse(object):
         direction = 1
         floors = []
         in_lift = []
-        calls = sorted(set(self.get_calls(queue, direction)))
+        calls = self.get_calls(queue, direction)
         while True:
             if len(calls) == 0:
-                # reverse direction
                 direction = -direction
                 calls = self.get_calls(queue, direction)
                 if len(calls) == 0:
@@ -109,18 +107,15 @@ class Dinglemouse(object):
 
 
 # Floors:    G     1      2        3     4      5      6         Answers:
-# tests = [[ ( (),   (),    (5,5,5), (),   (),    (),    () ),     [0, 2, 5, 0]          ],
-#          [ ( (),   (),    (1,1),   (),   (),    (),    () ),     [0, 2, 1, 0]          ],
-#          [ ( (),   (3,),  (4,),    (),   (5,),  (),    () ),     [0, 1, 2, 3, 4, 5, 0] ],
-#          [ ( (),   (0,),  (),      (),   (2,),  (3,),  () ),     [0, 5, 4, 3, 2, 1, 0] ]]
+tests = [[ ( (),   (),    (5,5,5), (),   (),    (),    () ),     [0, 2, 5, 0]          ],
+         [ ( (),   (),    (1,1),   (),   (),    (),    () ),     [0, 2, 1, 0]          ],
+         [ ( (),   (3,),  (4,),    (),   (5,),  (),    () ),     [0, 1, 2, 3, 4, 5, 0] ],
+         [ ( (),   (0,),  (),      (),   (2,),  (3,),  () ),     [0, 5, 4, 3, 2, 1, 0] ]]
 
-tests = [[[[3, 3, 3, 3, 3, 3], [], [], [], [], [], []], [0, 3, 0, 3, 0]],
-         [[[], [0, 0, 0, 6], [], [], [], [6, 6, 0, 0, 0, 6], []], [0, 1, 5, 6, 5, 1, 0, 1, 0] ]]
+# tests = [[[[3, 3, 3, 3, 3, 3], [], [], [], [], [], []], [0, 3, 0, 3, 0]],
+#          [[[], [0, 0, 0, 6], [], [], [], [6, 6, 0, 0, 0, 6], []], [0, 1, 5, 6, 5, 1, 0, 1, 0] ]]
 
 # [[], [], [4, 4, 4, 4], [], [2, 2, 2, 2], [], []], capacity 2 should equal [0, 2, 4, 2, 4, 2, 0]
-
-
-# tests =   [[ ( (),   (0,),  (),      (),   (2,),  (3,),  () ),     [0, 5, 4, 3, 2, 1, 0] ]]
   
   
 for queues, answer in tests:
