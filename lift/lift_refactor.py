@@ -3,28 +3,28 @@ import codewars_test as test
 class Dinglemouse(object):
 
     def __init__(self, queues, capacity):
-        self.queue = queues
+        self.queue = [list(q) for q in queues]
         self.capacity = capacity
     
     def get_calls(self, queue, direction):
         return [i for i, q in (list(zip(range(len(queue)), queue))[::direction]) if len(q) > 0 and ((direction == 1 and max(q) > i) or (direction == -1 and min(q) < i))]
 
     def theLift(self):
-        direction, floors, in_lift, queue = 1, [0], [], [list(q) for q in self.queue]
-        calls = self.get_calls(queue, direction)
+        direction, floors, in_lift= 1, [0], []
+        calls = self.get_calls(self.queue, direction)
         while True:
             if not calls:
                 direction = -direction
-                calls = self.get_calls(queue, direction)
-                if not any(queue): break
+                calls = self.get_calls(self.queue, direction)
+                if not any(self.queue): break
                 continue         
             floors.append(calls[0]) if not floors or floors[-1] != calls[0] else None
             in_lift = [p for p in in_lift if p != calls[0]]
-            for p in queue[calls[0]][:]:
+            for p in self.queue[calls[0]][:]:
                 if ((direction == 1 and p > calls[0]) or (direction == -1 and p < calls[0])) and (len(in_lift) < self.capacity):
                     in_lift.append(p)
                     calls.append(p)
-                    queue[calls[0]].remove(p)
+                    self.queue[calls[0]].remove(p)
             calls = sorted(set(calls), reverse=(direction == -1))
             calls.pop(0)
         floors.append(0) if floors[-1] != 0 else None
