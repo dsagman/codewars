@@ -5,43 +5,29 @@ class Dinglemouse(object):
     def __init__(self, queues, capacity):
         self.queue = queues
         self.capacity = capacity
-
+    
     def get_calls(self, queue, direction):
-        calls = []
-        for i, q in enumerate(queue[::direction]):
-            if (len(q) > 0) and (direction == 1) and (max(q) > i):
-                    calls.append(i)
-            elif (len(q) > 0) and (direction == -1) and (min(q) < len(queue) - i - 1):
-                    calls.append(len(queue) - i - 1)
-        return calls
-      
+        return [i for i, q in (list(zip(range(len(queue)), queue))[::direction]) if len(q) > 0 and ((direction == 1 and max(q) > i) or (direction == -1 and min(q) < i))]
+
     def theLift(self):
-        queue = [list(q) for q in self.queue]
-        direction, floors, in_lift = 1, [], []
+        direction, floors, in_lift, queue = 1, [0], [], [list(q) for q in self.queue]
         calls = self.get_calls(queue, direction)
         while True:
             if not calls:
                 direction = -direction
                 calls = self.get_calls(queue, direction)
-                if not any(queue):
-                    break
+                if not any(queue): break
                 continue         
-            if not floors or floors[-1] != calls[0]:
-                floors.append(calls[0])
-
+            floors.append(calls[0]) if not floors or floors[-1] != calls[0] else None
             in_lift = [p for p in in_lift if p != calls[0]]
             for p in queue[calls[0]][:]:
-                if ((direction == 1 and p > calls[0]) or (direction == -1 and p < calls[0])) \
-                        and (len(in_lift) < self.capacity):
+                if ((direction == 1 and p > calls[0]) or (direction == -1 and p < calls[0])) and (len(in_lift) < self.capacity):
                     in_lift.append(p)
                     calls.append(p)
                     queue[calls[0]].remove(p)
             calls = sorted(set(calls), reverse=(direction == -1))
             calls.pop(0)
-        if floors and floors[-1] != 0:
-            floors.append(0)
-        if  not floors or floors[0] != 0:
-            floors.insert(0, 0)        
+        floors.append(0) if floors[-1] != 0 else None
         return floors
     
 
@@ -51,8 +37,8 @@ tests = [[ ( (),   (),    (5,5,5), (),   (),    (),    () ),     [0, 2, 5, 0]   
          [ ( (),   (),    (1,1),   (),   (),    (),    () ),     [0, 2, 1, 0]          ],
          [ ( (),   (3,),  (4,),    (),   (5,),  (),    () ),     [0, 1, 2, 3, 4, 5, 0] ],
          [ ( (),   (0,),  (),      (),   (2,),  (3,),  () ),     [0, 5, 4, 3, 2, 1, 0] ]]
-tests = [[[[3, 3, 3, 3, 3, 3], [], [], [], [], [], []], [0, 3, 0, 3, 0]],
-         [[[], [0, 0, 0, 6], [], [], [], [6, 6, 0, 0, 0, 6], []], [0, 1, 5, 6, 5, 1, 0, 1, 0] ]]
+# tests = [[[[3, 3, 3, 3, 3, 3], [], [], [], [], [], []], [0, 3, 0, 3, 0]],
+#          [[[], [0, 0, 0, 6], [], [], [], [6, 6, 0, 0, 0, 6], []], [0, 1, 5, 6, 5, 1, 0, 1, 0] ]]
 
 # [[], [], [4, 4, 4, 4], [], [2, 2, 2, 2], [], []], capacity 2 should equal [0, 2, 4, 2, 4, 2, 0]
 
