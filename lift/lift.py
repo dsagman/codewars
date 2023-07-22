@@ -80,10 +80,10 @@ class Dinglemouse(object):
             if len(floors) == 0 or floors[-1] != cur_floor:
                 floors.append(cur_floor)
             print("current floor: ", cur_floor)
+            # remove people from lift if at their floor
             in_lift = [p for p in in_lift if p != cur_floor]
             num_in_lift = len(in_lift)
             print("People in lift: ", in_lift)
-
             # add people into lift if waiting
             queue_cur_floor = copy.copy(queue[cur_floor])
             if len(queue_cur_floor) > 0:
@@ -96,9 +96,6 @@ class Dinglemouse(object):
                         queue[cur_floor].remove(p)
                         print(f"Person requesting {p} got on the lift, {num_in_lift} people in lift")
             calls = self.sort_calls(calls, direction)
-
-            # queue[cur_floor] = [p for p in queue[cur_floor] if p not in in_lift]
-            # print("People in lift: ", in_lift)
             print("People waiting: ", queue[cur_floor])
             print("People getting off: ", [p for p in in_lift if p == cur_floor])
             # remove people from lift if at their floor

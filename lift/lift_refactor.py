@@ -23,18 +23,15 @@ class Dinglemouse(object):
             if not calls:
                 direction = -direction
                 calls = self.get_calls(queue, direction)
-                continue
                 if not any(queue):
                     break
-                else:
-                    continue          
+                continue         
             if not floors or floors[-1] != calls[0]:
                 floors.append(calls[0])
-            if not any(queue):
-                break
+
             in_lift = [p for p in in_lift if p != calls[0]]
             for p in queue[calls[0]][:]:
-                if ((direction and p > calls[0]) or (direction == -1 and p < calls[0])) \
+                if ((direction == 1 and p > calls[0]) or (direction == -1 and p < calls[0])) \
                         and (len(in_lift) < self.capacity):
                     in_lift.append(p)
                     calls.append(p)
