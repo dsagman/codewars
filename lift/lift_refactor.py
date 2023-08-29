@@ -6,17 +6,13 @@ class Dinglemouse(object):
         self.queue = [list(q) for q in queues]
         self.capacity = capacity
     
-    def get_calls(self, queue, direction):
-        return [i for i, q in (list(zip(range(len(queue)), queue))[::direction]) if len(q) > 0 and ((direction == 1 and max(q) > i) or (direction == -1 and min(q) < i))]
-
     def theLift(self):
-        direction, floors, in_lift= 1, [0], []
-        calls = self.get_calls(self.queue, direction)
+        direction, floors, in_lift, calls = -1, [0], [], []
         while True:
             if not calls:
-                direction = -direction
-                calls = self.get_calls(self.queue, direction)
                 if not any(self.queue): break
+                direction = -direction
+                calls = [i for i, q in (list(zip(range(len(self.queue)), self.queue))[::direction]) if len(q) > 0 and ((direction == 1 and max(q) > i) or (direction == -1 and min(q) < i))]
                 continue         
             floors.append(calls[0]) if not floors or floors[-1] != calls[0] else None
             in_lift = [p for p in in_lift if p != calls[0]]
