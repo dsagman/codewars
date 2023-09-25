@@ -1,4 +1,5 @@
 /node_modules
 *.json
 /.venv
-.DS_Store
+/.DS_Store
+
