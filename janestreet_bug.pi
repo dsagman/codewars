@@ -1,0 +1,101 @@
+import sat.
+
+main =>
+    % Define the graph with nodes and edges using letter names
+    Nodes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'S'],
+    Edges = [('A', 'B'), ('A', 'D'),
+             ('B', 'S'),
+             ('C', 'H'),
+             ('D', 'S'), ('D', 'H'),
+             ('S', 'I'),
+             ('F', 'I'),
+             ('G', 'J'),
+             ('H', 'J'), ('H', 'K'),
+             ('I', 'J'), ('I', 'L'),
+             ('J', 'K'), ('J', 'L'),
+             ('K', 'M'), ('K', 'P'), ('K', 'N'),
+             ('L', 'O'), ('L', 'Q'),
+             ('M', 'N'), ('M', 'O'),
+             ('N', 'E'),
+             ('O', 'E')
+          ],
+
+    
+    % Define the known sum of weights for some nodes
+    KnownSums = [('A', 17), 
+                 ('B', 3),
+                 ('H', 54),
+                 ('I', 49),
+                 ('J', 60),
+                 ('K', 79),
+                 ('L', 75),
+                 ('M', 29),
+                 ('N', 39),
+                 ('O', 25)
+                ],
+
+    KnownPathSums = [('G', 6)],
+
+                    % [('C', 31), 
+                    %  ('D', 19), ('D', 23),
+                    %  ('G', 6), ('G', 9), ('G', 16),
+                    %  ('F', 8)],
+
+    
+    % Define the domain of possible edge weights (1 to 24)
+    Domain = 1..24,
+    
+    % Create a dictionary to store the variables representing edge weights
+    EdgeVars = [(Edge, V) : Edge in Edges, V :: Domain],
+    
+    % Use alldifferent/1 to enforce uniqueness of edge weights
+    all_distinct([V : (_, V) in EdgeVars]),
+    
+    
+    % Add constraints to enforce known sum of weights for nodes
+    foreach((Node, Sum) in KnownSums),
+        NodeEdges = [(N1, N2) : (N1, N2) in Edges, (N1 = Node ; N2 = Node)],
+        NodeVars = [V : (Edge, V) in EdgeVars, Edge in NodeEdges],
+        sum(NodeVars) #= Sum
+    end,
+    
+    % Add constraint that the weight on an edge is less than or equal to KnownPathSums
+    foreach((Node, Sum) in KnownPathSums),
+        NodePathEdges = [(N1, N2) : (N1, N2) in Edges, (N1 = Node ; N2 = Node)],
+        NodePathVars = [V : (Edge, V) in EdgeVars, Edge in NodePathEdges],
+        sum(NodePathVars) #<= Sum
+    end,
+
+    % Search for a solution
+    % solve([ffc],[V : (_, V) in EdgeVars]),
+
+    % % Output the solution
+    % foreach((E, V) in EdgeVars)
+    %     print((E, V)),
+    %     print('\n'),
+    % end,
+
+    % Find all possible combinations of edge weights
+    % Solutions = findall(EdgeVars, solve([ffc], EdgeVars)),
+    Solutions = solve_all([$threads(128)], EdgeVars),
+    printf("Number of solutions: %d\n", length(Solutions)),
+    Num = 10,
+    print_solutions(Solutions, Num).
+
+    % print("Number of solutions: ")
+    % print(length(Solutions))
+
+    % Output the solutions
+
+
+
+print_solutions(Solutions, Num) =>  
+    foreach(Solution in Solutions[1..Num])
+        print("Solution:\n"),
+        print("=========\n"),
+        print(Solution),
+        print("\n")
+    end.
+  
+
+
