@@ -78,23 +78,19 @@ main =>
     % Solutions = findall(EdgeVars, solve([ffc], EdgeVars)),
     Solutions = solve_all([ffc], EdgeVars),
     printf("Number of solutions: %d\n", length(Solutions)),
-    Num = 10,
-    print_solutions(Solutions, Num).
+    print_solutions(Solutions).
 
     % print("Number of solutions: ")
     % print(length(Solutions))
 
     % Output the solutions
-
-
-
-print_solutions(Solutions, Num) =>  
-    foreach(Solution in Solutions[1..Num])
-        print("Solution:\n"),
-        print("=========\n"),
-        print(Solution),
-        print("\n")
-    end.
+    print_solutions(Solutions) =>
+        Out = open("solutions.txt", write),
+        foreach(Solution in Solutions)
+            println(Out, Solution)
+        end,
+        close(Out).
+    
   
 
 
