@@ -6,7 +6,7 @@
 # a7 - linux function number
 #
 
-.global _start      # Provide program starting address to linker
+.globl _start      # Provide program starting address to linker
 
 # Setup the parameters to print hello world
 # and then call Linux to do it.
@@ -25,4 +25,4 @@ _start: addi  a0, x0, 1      # 1 = StdOut
         ecall               # Call linux to terminate the program
 
 .data
-helloworld:      .ascii "Hello World!\n"
+helloworld:      .string "Hello World!\n"
