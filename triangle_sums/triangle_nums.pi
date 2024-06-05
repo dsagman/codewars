@@ -1,0 +1,32 @@
+% calculate triangle nums that sum to a given number
+
+import mip.
+
+main =>
+    Print_Solutions = false,
+    MaxN = 500,
+    MaxT = (ceiling((sqrt(8*MaxN + 1) - 1)) // 2),
+    TriangleNums = [T * (T + 1) //2 : T in 0..MaxT],
+    Counts = [],
+    foreach(N in 1..MaxN)
+        MaxTforN = (ceiling((sqrt(8*N + 1) - 1)) // 2),
+        Solution = triangle_num_sums(N, slice(TriangleNums, 1, MaxTforN+1)),
+        Count = last(Solution),
+        Counts := Counts ++ [Count],
+        if Print_Solutions then
+            printf("%d, ", Count),
+            printf("Solution: %w\n", Solution)
+        end,
+    end,
+    println("\b"),
+    println(Counts).
+
+triangle_num_sums(N, TriangleNums) = (Solutions, Num_solutions) =>
+    Vars = [T1, T2, T3],
+    Vars :: TriangleNums,
+    sum(Vars) #= N,
+    T1 #=< T2,
+    T2 #=< T3,
+    % Solutions = solve_all([ff], Vars),
+    Solutions = solve_all(Vars),
+    Num_solutions = length(Solutions).
