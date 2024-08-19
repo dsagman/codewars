@@ -16,12 +16,12 @@ with open(dictionary) as f:
 
 words = [w for w in words if len(w) >= 3 and len(w) <= 9 and any(v in w for v in 'aeiouy') and w[0].islower()]
 print(f'Number of words imported: {len(words):,}')
-puzzle = 'enrtblaoipxs'
+puzzle = 'xnimalpjyegf'
 
 # let's do it functionally!
-words_valid = [w for w in words if len(set(w)) == len(w) and 
-            not any(map(lambda x,y: x == y or x == -1 or y == -1, 
-                (idx := [(puzzle.find(c) // 3) for c in w]), idx[1:]))]
+words_valid = [w for w in words 
+               if not any(map(lambda x,y: x == y or x == -1 or y == -1, 
+               (idx := [(puzzle.find(c) // 3) for c in w]), idx[1:]))]
 print(f'Number of possible words: {len(words_valid):,}')
 
 start_time = time.perf_counter()
@@ -41,7 +41,7 @@ start_time = time.perf_counter()
 valid_pairs = [(w1,w2) for w2 in words_valid for w1 in words_valid if w2[0] == w1[-1]] 
 end_time = time.perf_counter()
 print(f'Number of valid two word combos: {len(valid_pairs):,}')
-print(f'Elapsed time (sequential): {end_time - start_time:.2f} seconds')
+print(f'2 words elapsed time (sequential): {end_time - start_time:.2f} seconds')
 
 two_word_solutions = [(w1,w2) for w1, w2 in valid_pairs if len(set(w1+w2)) == len(puzzle)]
 print(f'Number of two word full solutions: {len(two_word_solutions):,}')
@@ -63,8 +63,8 @@ valid_triples = [(w1,w2,w3) for w3 in words_valid for w1,w2 in valid_pairs if w3
 three_word_solutions = [(w1,w2,w3) for w1,w2,w3 in valid_triples if len(set(w1+w2+w3)) == len(puzzle)]
 end_time = time.perf_counter()
 print(f'Number of valid three word combos: {len(valid_triples):,}')
-print(f'3 words Elapsed time (sequential): {end_time - start_time:.2f} seconds')
 
+print(f'3 words elapsed time (sequential): {end_time - start_time:.2f} seconds')
 print(f'Number of three word full solutions: {len(three_word_solutions):,}')
 # print(three_word_solutions)
 
@@ -81,12 +81,11 @@ print(f'Number of three word full solutions: {len(three_word_solutions):,}')
 
 start_time = time.perf_counter()
 valid_quads = [(w1,w2,w3,w4) for w4 in words_valid for w1,w2,w3 in valid_triples if w4[0] == w3[-1]]
+four_word_solutions = [(w1,w2,w3,w4) for w1,w2,w3,w4 in valid_quads if len(set(w1+w2+w3+w4)) == len(puzzle)]
 end_time = time.perf_counter()
 print(f'Number of valid four word combos: {len(valid_quads):,}')
+print(f'Number of four word full solutions: {len(four_word_solutions):,}')
 print(f'4 words Elapsed time (sequential): {end_time - start_time:.2f} seconds')
-
-# four_word_solutions = [(w1,w2,w3,w4) for w1,w2,w3,w4 in valid_quads if len(set(w1+w2+w3+w4)) == len(puzzle)]
-# print(f'Number of four word full solutions: {len(four_word_solutions):,}')
 # print(four_word_solutions)
 
 # iterative solution for possible words
