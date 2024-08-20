@@ -5,42 +5,48 @@ import Data.List.Extra ( nubOrd, chunksOf )
 import Data.Char ( isLower, toLower, isLetter )
 import Data.Maybe ( fromMaybe )
 import Control.Monad ( when )
+import System.IO (hFlush, stdout)
+import System.Console.ANSI (setSGRCode, SGR(..), Color(..), ColorIntensity(..), ConsoleLayer(..))
 
-wordCheck :: String -> String -> Bool
-wordCheck ps xs = not $ or $ zipWith (==) idxes (tail idxes)
-    where idxes = map (flip div 3 . fromMaybe (-1 ). (`elemIndex` ps)) xs
-
-addCommas :: Int -> String
-addCommas n = reverse $ intercalate "," $ chunksOf 3 $ reverse $ show n
-
-firstOfSublist :: Int -> [a] -> [a]
-firstOfSublist n xs = map head $ filter (not . null) (splitIntoN n xs)
-
-splitIntoN :: Int -> [a] -> [[a]]
-splitIntoN n ys = go sizes ys
-  where
-    len = length ys
-    (q, r) = len `divMod` n
-    sizes = replicate r (q + 1) ++ replicate (n - r) q
-    go [] _ = []
-    go (s:ss) zs = take s zs : go ss (drop s zs)
 
 getPuzzleInput :: IO String
 getPuzzleInput = do
+  let defaultPuzzle = "xnimalpjyegf"
   putStrLn "Enter the puzzle, no blanks, start at top left:"
-  putStrLn "Example: xnimalpjyegf"
+  putStrLn "Example [default]: xnimalpjyegf"
   puzzle <- getLine
-  if length puzzle /= 12 || not (all isLetter puzzle)
-    then do
-      putStrLn "Puzzle must be 13 characters long and contain only letters."
-      getPuzzleInput -- Recurse until the input is valid
-    else return puzzle
+  if null puzzle
+    then return defaultPuzzle -- Use the default puzzle if input is empty
+    else if length puzzle /= 12 || not (all isLetter puzzle)
+      then do
+        putStrLn "Puzzle must be 12 characters long and contain only letters."
+        getPuzzleInput -- Recurse until the input is valid
+      else return puzzle
+
+wordCheck :: String -> String -> Bool
+wordCheck ps xs = not $ or $ zipWith (==) idxes (tail idxes)
+    where idxes = map (flip div 3 . fromMaybe (-1) . (`elemIndex` ps)) xs
+
+nWordCombo :: Ord a => [[[a]]] -> [[a]] -> Bool -> [[[a]]]
+nWordCombo existCombos wordsValid reqUniq =
+          [ combo ++ [w]
+          | combo <- existCombos         -- memoize the existing combos
+          , w <- wordsValid
+          , last (last combo) == head w  -- Ensure the last character of the current combo matches the first character of the next word
+          , w `notElem` combo            -- Ensure the word is not already in the combo (no repeats)
+          , not reqUniq || length (nubOrd (concat (combo ++ [w]))) == length (concat (combo ++ [w]))  -- Check uniqueness if required 
+          ]
+
+nWordSol :: (Ord a, Foldable t) => [t [a]] -> Int -> [t [a]]
+nWordSol combos lenP = [x | x <- combos, length (nubOrd (concat x)) == lenP]
 
 main :: IO()
 main = do
-  puzzle <- getPuzzleInput
+  puzzle <- getPuzzleInput 
+  let lenP = length puzzle
   putStrLn $ "You entered: " ++ puzzle
-  putStr "Do you want to require no repeating letters in 3 and 4 word solutions? (y/n)"
+  putStr "Do you want no duplicate letters in 3, 4 and 5 word solutions? (y/[n])"
+  hFlush stdout
   reqUniqIn <- getChar
   let reqUniq = case toLower reqUniqIn of
                   'y' -> True
@@ -56,33 +62,17 @@ main = do
                     all (`elem` puzzle) w) $ lines wordList
   let wordsValid = filter (wordCheck puzzle) wordsBase
 
-  let twoWordCombos = [(w1, w2) | w1 <- wordsValid
-                      , w2 <- wordsValid
-                      , last w1 == head w2
-                      , w1 /= w2]
-  let twoWordSolutions = [(w1, w2) | (w1, w2) <- twoWordCombos
-                      , length (nubOrd (w1 ++ w2)) == length puzzle]
+  let twoWordCombos = nWordCombo [[w1] | w1 <- wordsValid] wordsValid False
+  let twoWordSolutions = nWordSol twoWordCombos lenP
 
-  -- for three and four word solutions, don't allow repeating letters
-  -- greatly reduces search space
-  let threeWordCombos = [(w1, w2, w3) | (w1, w2) <- twoWordCombos
-                        , w3 <- wordsValid
-                        , last w2 == head w3
-                        , w1 /= w3, w2 /= w3
-                        , let ww = w1 ++ tail w2 ++ tail w3
-                        , not reqUniq ||length (nubOrd ww) == length ww ]
-  let threeWordSolutions = [(w1, w2, w3) | (w1, w2, w3) <- threeWordCombos
-                        , length (nubOrd (w1 ++ w2 ++ w3)) == length puzzle]
+  let threeWordCombos = nWordCombo twoWordCombos wordsValid reqUniq
+  let threeWordSolutions = nWordSol threeWordCombos lenP
 
+  let fourWordCombos = nWordCombo threeWordCombos wordsValid reqUniq
+  let fourWordSolutions = nWordSol fourWordCombos lenP
 
-  let fourWordCombos = [(w1, w2, w3, w4) | (w1, w2, w3) <- threeWordCombos
-                        , w4 <- wordsValid
-                        , last w3 == head w4
-                        , w1 /= w4, w2 /= w4, w3 /= w4
-                        , let ww = w1 ++ tail w2 ++ tail w3 ++ tail w4
-                        , not reqUniq || length (nubOrd ww) == length ww]
-  let fourWordSolutions = [(w1, w2, w3, w4) | (w1, w2, w3, w4) <- fourWordCombos
-                        , length (nubOrd (w1 ++ w2 ++ w3 ++ w4)) == length puzzle]
+  let fiveWordCombos = nWordCombo fourWordCombos wordsValid reqUniq
+  let fiveWordSolutions = nWordSol fiveWordCombos lenP
 
   let solN = 10 -- number of solutions to display
   putStrLn ""
@@ -92,16 +82,41 @@ main = do
   putStrLn $ "Valid words: " ++ addCommas (length wordsValid)
   putStrLn $ "Two Word Combos: " ++ addCommas (length twoWordCombos)
   putStrLn $ "Two Word Solutions:" ++ addCommas (length twoWordSolutions)
-  mapM_ (putStrLn . ("\t" ++) . show) twoWordSolutions
-  putStrLn $ "Three Word Combos: " ++ addCommas (length threeWordCombos) ++ "sample below"
-  putStrLn $ "Three Word Solutions: " ++ addCommas (length threeWordSolutions)
-  mapM_ (putStrLn . ("\t" ++) . show) $ firstOfSublist solN threeWordSolutions
+  mapM_ textFormat twoWordSolutions
+  putStrLn $ "Three Word Combos: " ++ addCommas (length threeWordCombos) 
+  putStrLn $ "Three Word Solutions: " ++ addCommas (length threeWordSolutions) ++ ", sample below"
+  mapM_ textFormat $ firstOfSublist solN threeWordSolutions
   putStrLn $ "Four Word Combos: " ++ addCommas (length fourWordCombos)
-  putStrLn $ "Four Word Solutions: " ++ addCommas (length fourWordSolutions)  ++ "sample below"
-  mapM_ (putStrLn . ("\t" ++) . show) $ firstOfSublist solN fourWordSolutions
-  when reqUniq $ putStrLn "*Three and four word solutions have no repeating letters"
+  putStrLn $ "Four Word Solutions: " ++ addCommas (length fourWordSolutions)  ++ ", sample below"
+  mapM_ textFormat $ firstOfSublist solN fourWordSolutions
+  putStrLn $ "Five Word Combos: " ++ addCommas (length fiveWordCombos)
+  putStrLn $ "Five Word Solutions: " ++ addCommas (length fiveWordSolutions)  ++ ", sample below"
+  mapM_ textFormat $ firstOfSublist solN fiveWordSolutions
+  when reqUniq $ putStrLn "*Three, four and five word solutions have no repeating letters"
   putStrLn "---------------------------"
 
+addCommas :: Int -> String
+addCommas n = reverse $ intercalate "," $ chunksOf 3 $ reverse $ show n
+
+textFormat :: [[Char]] -> IO ()
+textFormat = putStrLn . (("\t" ++) . (blueText ++) . (++ resetText) . intercalate ", ")
+blueText :: String
+blueText = setSGRCode [SetColor Foreground Vivid Blue] -- ANSI code for blue text
+resetText :: String
+resetText = setSGRCode [Reset] -- ANSI code to reset to default color
+
+
+firstOfSublist :: Int -> [a] -> [a]
+firstOfSublist n xs = map head $ filter (not . null) (splitIntoN n xs)
+
+splitIntoN :: Int -> [a] -> [[a]]
+splitIntoN n ys = go sizes ys
+  where
+    len = length ys
+    (q, r) = len `divMod` n
+    sizes = replicate r (q + 1) ++ replicate (n - r) q
+    go [] _ = []
+    go (s:ss) zs = take s zs : go ss (drop s zs)
 
 -- the below are amazing map implementations and too much overhead. 
 -- ran slower than naive implementation above
