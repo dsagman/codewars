@@ -8,7 +8,8 @@ from colorama import Fore
 
 def puz(num, exist_combos, words_valid):
     start_time = time.perf_counter()   
-    combos = [e+[w] for w in words_valid for e in exist_combos if w[0] == e[-1][-1] and w not in e]
+    # combos = [e+[w] for w in words_valid for e in exist_combos if w[0] == e[-1][-1] and w not in e]
+    combos = [e + [w]  for e in exist_combos for w in first_dict[e[-1][-1]] if w not in e]
     sols = [c for c in combos if len(set(''.join(c))) == len(puzzle)]
     end_time = time.perf_counter()   
     print(f'{num} word valid combos: {Fore.BLUE}{len(combos):,}{Fore.WHITE}')
@@ -25,7 +26,8 @@ def get_words(dict_file):
         
 if __name__ == '__main__':
     # puzzle = 'xnimalpjyegf'
-    puzzle = 'nosumailtcvr'
+    # puzzle = 'nosumailtcvr'
+    puzzle = 'vkspyielurao'
     
     words = get_words('/usr/share/dict/words')
     print(f'Number of words imported: {Fore.BLUE}{len(words):,}{Fore.WHITE}')
@@ -35,10 +37,11 @@ if __name__ == '__main__':
                 (idx := [(puzzle.find(c) // 3) for c in w]), idx[1:]))]
     print(f'Number of possible words: {Fore.BLUE}{len(words_valid):,}{Fore.WHITE}')
 
-    valid_2 = puz(2, [[w] for w in words_valid], words_valid)
-    valid_3 = puz(3, valid_2, words_valid)
-    valid_4 = puz(4, valid_3, words_valid)
-    valid_5 = puz(5, valid_4, words_valid)
+    first_dict = {k: [w for w in words_valid if w[0] == k] for k in puzzle}
+    valid_2 = puz(2, [[w] for w in words_valid], first_dict)
+    valid_3 = puz(3, valid_2, first_dict)
+    valid_4 = puz(4, valid_3, first_dict)
+    # valid_5 = puz(5, valid_4, first_dict)
     
     
     
