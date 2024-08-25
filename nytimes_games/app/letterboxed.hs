@@ -1,6 +1,6 @@
 module Main where
 
-import Data.List ( elemIndex, intercalate)
+import Data.List ( elemIndex, intercalate, isInfixOf)
 import Data.List.Extra ( chunksOf )
 import Data.Char ( isLower, toLower, isLetter )
 import Data.Maybe ( fromMaybe )
@@ -12,6 +12,8 @@ import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import qualified Data.Set as S
 import Text.Printf (printf)
 
+
+-- time to beat for 3 words is 3 seconds
 getPuzzleInput :: IO String
 getPuzzleInput = do
   -- let defaultPuzzle = "xnimalpjyegf"
@@ -31,32 +33,20 @@ wordCheck :: String -> String -> Bool
 wordCheck ps xs = not $ or $ zipWith (==) idxes (tail idxes)
     where idxes = map (flip div 3 . fromMaybe (-1) . (`elemIndex` ps)) xs
 
--- nWordCombo :: Ord a => [[[a]]] -> [[a]] -> Bool -> [[[a]]]
--- nWordCombo existCombos wordsValid reqUniq =
---           [ combo ++ [w]
---           | combo <- existCombos         -- memoize the existing combos
---           , w <- wordsValid
---           , last (last combo) == head w  -- Ensure the last character of the current combo matches the first character of the next word
---           , w `notElem` combo            -- Ensure the word is not already in the combo (no repeats)
---           , not reqUniq || length (nubOrd (concat (combo ++ [w]))) == length (concat (combo ++ [w]))  -- Check uniqueness if required 
---           ]
-
-nWordCombo :: Ord a => [[[a]]] -> M.Map a [[a]] -> Bool -> [[[a]]]
+nWordCombo :: [String] -> M.Map Char [String] -> Bool -> [String]
 nWordCombo existCombos firstCharMap reqUniq =
-          [ combo ++ [w]
+          [ combo ++ " " ++ w
           | combo <- existCombos         -- memoize the existing combos
-          , Just ws <- [M.lookup (last (last combo)) firstCharMap]
+          , Just ws <- [M.lookup (last combo) firstCharMap]
           , w <- ws
-          , w `notElem` combo            -- Ensure the word is not already in the combo (no repeats)
-          , not reqUniq || S.size (S.fromList (concat (combo ++ [w]))) == length (concat (combo ++ [w]))  -- Check uniqueness if required 
+          , not $ isInfixOf w combo
+          , not reqUniq || S.size (S.fromList (combo ++ w)) == length (combo ++ w)  -- Check uniqueness if required 
           ]
 
-nWordSol :: (Ord a, Foldable t) => [t [a]] -> Int -> [t [a]]
+nWordSol :: [String] -> Int -> [String]
 nWordSol combos lenP = [x |
                           x <- combos
-                          , let conX = concat x
-                          , length conX >= lenP
-                          , S.size (S.fromList conX) == lenP
+                          , S.size (S.fromList x) == lenP + 1
                           ]
 
 main :: IO()
@@ -81,7 +71,7 @@ main = do
 
   let firstCharMap = M.fromListWith (++) [(head w, [w]) | w <- wordsValid]
 
-  let twoWordCombos = nWordCombo [[w1] | w1 <- wordsValid] firstCharMap False
+  let twoWordCombos = nWordCombo wordsValid firstCharMap False
   let twoWordSolutions = nWordSol twoWordCombos lenP
 
   let threeWordCombos = nWordCombo twoWordCombos firstCharMap reqUniq
@@ -105,7 +95,7 @@ main = do
   when reqUniq $ putStrLn "*Three, four and five word solutions have no repeating letters"
   putStrLn "---------------------------"
 
-goOutput :: String -> [[[Char]]] -> [[[Char]]] -> IO ()
+goOutput :: String -> [[Char]] -> [[Char]] -> IO ()
 goOutput n combos sols = do
   let solN = 10 -- number of solutions to display
   sTime <- getCurrentTime
@@ -119,8 +109,8 @@ goOutput n combos sols = do
 addCommas :: Int -> String
 addCommas n = reverse $ intercalate "," $ chunksOf 3 $ reverse $ show n
 
-textFormat :: [[Char]] -> IO ()
-textFormat = putStrLn . (("\t" ++) . (blueText ++) . (++ resetText) . intercalate ", ")
+textFormat :: [Char] -> IO ()
+textFormat = putStrLn . (("\t" ++) . (blueText ++) . (++ resetText))
 
 blueText :: String
 blueText = setSGRCode [SetColor Foreground Vivid Blue] -- ANSI code for blue text
