@@ -113,10 +113,10 @@ textFormat :: [Char] -> IO ()
 textFormat = putStrLn . (("\t" ++) . (blueText ++) . (++ resetText))
 
 blueText :: String
-blueText = setSGRCode [SetColor Foreground Vivid Blue] -- ANSI code for blue text
+blueText = setSGRCode [SetColor Foreground Vivid Blue] 
 
 resetText :: String
-resetText = setSGRCode [Reset] -- ANSI code to reset to default color
+resetText = setSGRCode [Reset] 
 
 firstOfSublist :: Int -> [a] -> [a]
 firstOfSublist n xs = map head $ filter (not . null) (splitIntoN n xs)
