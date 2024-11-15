@@ -36,10 +36,10 @@ def puz_idx(num, exist_combos, words_valid, puzzle, bitmask):
         print(f'\t{Fore.GREEN}{s_words}{Fore.WHITE}')
     return combos
     
-def puz(num, exist_combos, words_valid, puzzle):
+def puz(num, exist_combos, first_dict, puzzle):
     print(f'Finding {num} word combos with simple method')
     start_time = time.perf_counter()   
-    combos = [' '.join([e,w])  for e in exist_combos for w in first_dict[e[-1]] if w not in e]
+    combos = [' '.join([e,w]) for e in exist_combos for w in first_dict[e[-1]] if w not in e]
     print(f'{num} word valid combos: {Fore.BLUE}{len(combos):,}{Fore.WHITE}')
     sols = [c for c in combos if len(set(c)) == len(puzzle)+1]
     end_time = time.perf_counter()   
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     words_combo = [Combo([words_dict[w]], words_bitmask[w]) for w in words_valid]
     valid_2_idx = puz_idx(2, words_combo, words_valid, puzzle, words_bitmask)
     valid_3_idx = puz_idx(3, valid_2_idx, words_valid, puzzle, words_bitmask)
-    valid_4_idx = puz_idx(4, valid_3_idx, words_valid, puzzle, words_bitmask)
+    # valid_4_idx = puz_idx(4, valid_3_idx, words_valid, puzzle, words_bitmask)
     
     valid_2 = puz(2, words_valid, first_dict, puzzle)
     valid_3 = puz(3, valid_2, first_dict, puzzle)

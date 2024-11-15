@@ -12,6 +12,6 @@ let sum_list l = List.fold_left (fun acc x -> acc + x) 0 l;;
 
 let dig_pow n p =
   let digits = list_of_int n in
-  let sum = sum_list ((List.mapi (fun i x -> pow x (p + i))) digits)
-  in if sum mod n = 0 then sum / n else -1;; 
+  let sum = sum_list ((List.mapi (fun i x -> pow x (p + i))) digits) in
+  if sum mod n = 0 then sum / n else -1;; 
 
