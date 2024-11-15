@@ -1,0 +1,25 @@
+import util.
+
+main =>
+    Ctr = 'i',
+    Six = "todrym",
+    DictFile = 'words_alpha.txt',
+    read_file_lines(DictFile) = Words,
+    Solution = [W : W in Words, len(W) > 3, membchk(Ctr, W), issubset(W, [Ctr]++Six)],
+    Pangram = [W : W in Solution, unique(W) = [Ctr]++Six],
+    println(Solution),
+    println(len(Solution)),
+    println(Pangram).
+
+
+unique(XS) = R =>
+    if len(XS) < 2 then
+        R = XS
+    else
+        XS = [H|T], 
+        R = [H|unique([X : X in T, X != H])]
+    end.
+
+
+issubset([], _) => true.
+issubset([H|T], S) => membchk(H, S), issubset(T, S).
