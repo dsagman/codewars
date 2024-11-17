@@ -11,7 +11,7 @@
 
 int main() {
     char word[MAX_WORD_LENGTH];
-    char solution[MAX_SOLUTIONS][MAX_WORD_LENGTH];
+    char solution[MAX_WORDS][MAX_WORD_LENGTH];
     char pangrams[MAX_PANGRAMS][MAX_WORD_LENGTH];
     int solCount = 0;
     int pangCount = 0;
@@ -40,7 +40,7 @@ int main() {
         }
         strcpy(solution[solCount], word);
         solCount++;
-        if (solCount >= MAX_SOLUTIONS) {
+        if (solCount >= MAX_WORDS) {
             printf("Error: Too many solutions!\n");
             exit(1);
         }

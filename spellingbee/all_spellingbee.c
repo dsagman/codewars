@@ -4,7 +4,7 @@
 #include <time.h>
 
 #define MAX_WORD_LENGTH 40
-#define MAX_SOLUTIONS 1000      // Maximum words in solution
+#define MAX_WORDS 100000     // Maximum words in solution
 #define MAX_PANGRAMS 100
 // #define DICTIONARY_FILE "words_alpha.txt"
 #define DICTIONARY_FILE "unix_words.txt" // only 78,000 words
@@ -14,10 +14,16 @@
 // 26*25*24*23*22*21*20 
 int main() {
     char word[MAX_WORD_LENGTH];
+    char (*words)[MAX_WORD_LENGTH] = malloc(MAX_WORDS * MAX_WORD_LENGTH);
+    if (words == NULL) {
+        printf("Error: Memory allocation failed\n");
+        exit(1);
+    }
     int solCount = 0;
     int pangCount = 0;
     int maxSolCount = 0;
     int maxPangCount = 0;
+    int wordCount = 0;
     int notSixCount;
     int isPangram;
     char CTR = 'a';
@@ -30,6 +36,16 @@ int main() {
         printf("Error: Could not open dictionary file\n");
         exit(1);
     }
+    while (fgets(word, MAX_WORD_LENGTH, inFile) != NULL) {
+        word[strcspn(word, "\n")] = '\0'; // Remove newline
+        strcpy(words[wordCount], word);
+        wordCount++;
+        if (wordCount >= MAX_WORDS) {
+            printf("Error: Too many words in dictionary\n");
+            break;
+        }
+    }
+    fclose(inFile);
 
     FILE* outFile;
     outFile = fopen(SAVE_FILE, "w");
@@ -75,14 +91,13 @@ int main() {
                                 }
     solCount = 0;
     pangCount = 0;
-    while (fgets(word, MAX_WORD_LENGTH, inFile) != NULL) {
-        word[strcspn(word, "\n")] = '\0'; // Remove newline
-        if (strlen(word) < 4 || strchr(word, CTR) == NULL) {
+    for (int w = 0; w < wordCount; w++) {
+        if (strlen(words[w]) < 4 || strchr(words[w], CTR) == NULL) {
             continue;
         }
         notSixCount = 0;
         for (int i = 0; i < strlen(word); i++) {
-            if (strchr(SIX, word[i]) == NULL && CTR != word[i]) {
+            if (strchr(SIX, words[w][i]) == NULL && CTR != words[w][i]) {
                 notSixCount++;
             }
         }
@@ -90,23 +105,14 @@ int main() {
             continue;
         }
         solCount++;
-        if (solCount >= MAX_SOLUTIONS) {
-            printf("Error: Too many solutions!\n");
-            exit(1);
-        }
         isPangram = 0;
         for (int i = 0; i < strlen(SIX); i++){
-            if (strchr(word, SIX[i]) > 0) {
+            if (strchr(words[w], SIX[i]) > 0) {
                 isPangram++;
             }
         }
         if (isPangram == 6) {
             pangCount++;
-            // printf("Pangram found! %s\n", word);
-            if (pangCount >= MAX_PANGRAMS) {
-                printf("Error: Too many pangrams!\n");
-                exit(1);
-            }
         }
     }
     if (solCount > maxSolCount) {
@@ -122,7 +128,6 @@ int main() {
     }
 
     // printf("{Center: %c, Six: %s, Solultions: %d, Pangrams: %d}\n", CTR, SIX, solCount, pangCount);
-    rewind(inFile);
     }
     }
     }
@@ -131,7 +136,6 @@ int main() {
     }
     }
     printf("Total time: %ld\n", time(NULL) - startTime);
-    fclose(inFile);
     fclose(outFile);
     return 0;
 }
