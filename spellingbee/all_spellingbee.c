@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define MAX_WORD_LENGTH 40
 #define MAX_SOLUTIONS 1000      // Maximum words in solution
 #define MAX_PANGRAMS 100
 // #define DICTIONARY_FILE "words_alpha.txt"
-#define DICTIONARY_FILE "unix_words.txt"
+#define DICTIONARY_FILE "unix_words.txt" // only 78,000 words
 #define SAVE_FILE "all_spellingbee.csv"
 
 // 1  2  3  4  5  6  7
@@ -21,6 +22,7 @@ int main() {
     int isPangram;
     char CTR = 'a';
     char SIX[] = "bcdefg";
+    int startTime = time(NULL);
 
     FILE* inFile;
     inFile = fopen(DICTIONARY_FILE, "r");
@@ -36,10 +38,11 @@ int main() {
         exit(1);
     }
     fprintf(outFile, "Center, Six, Solutions, Pangrams\n");
-
+    printf("Time: %ld\n", time(NULL));
     for (int i = 0; i < 26; i++) {
         CTR = 'a' + i;
         printf("Center: %c\n", CTR);
+        printf("Elapsed Time: %ld\n", time(NULL) - startTime);
         for (int j = 0; j < 26; j++) {
             SIX[0] = 'a' + j;
             if (SIX[0] == CTR) {
@@ -127,6 +130,7 @@ int main() {
     }
     }
     }
+    printf("Total time: %ld\n", time(NULL) - startTime);
     fclose(inFile);
     fclose(outFile);
     return 0;
