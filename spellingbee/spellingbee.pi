@@ -22,6 +22,7 @@ main =>
     print('Number words:'), println(len(Solution)),
     print('Pangram:'), println(Pangram).
 
+% We could have used ordered set, which has this subset, but it's another import
 issubset([], _) => true.
 issubset([H|T], S) => membchk(H, S), issubset(T, S).
 
