@@ -11,7 +11,7 @@
 
 int main() {
     char word[MAX_WORD_LENGTH];
-    char solution[MAX_WORDS][MAX_WORD_LENGTH];
+    char solution[MAX_SOLUTIONS][MAX_WORD_LENGTH];
     char pangrams[MAX_PANGRAMS][MAX_WORD_LENGTH];
     int solCount = 0;
     int pangCount = 0;
@@ -40,13 +40,18 @@ int main() {
         }
         strcpy(solution[solCount], word);
         solCount++;
-        if (solCount >= MAX_WORDS) {
+        if (solCount >= MAX_SOLUTIONS) {
             printf("Error: Too many solutions!\n");
             exit(1);
         }
         isPangram = 0;
         for (int i = 0; i < strlen(SIX); i++){
-            if (strchr(word, SIX[i]) > 0) {
+            // this works on Mac and Linux, but not Windows
+            // if (strchr(word, SIX[i]) > 0) {
+            //     isPangram++;
+            // }
+            // this works on Windows and not yet tested on Mac and Linux
+            if (strchr(word, SIX[i]) != NULL) {
                 isPangram++;
             }
         }
