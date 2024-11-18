@@ -34,6 +34,7 @@ int main()
     char SIX[] = "bcdefg";
     long int startTime = time(NULL);
     long int combos = 0;
+    long int combosWithPangram = 0;
     
 
     FILE *inFile;
@@ -72,6 +73,7 @@ int main()
         printf("Time: %ld\n", time(NULL));
         printf("Elapsed Time: %ld\n", time(NULL) - startTime);
         printf("Combos: %ld\n", combos);
+        printf("Total Combos with Pangram: %ld\n", combosWithPangram);
         for (int j = 0; j < 26; j++)
         {
             SIX[0] = 'a' + j;
@@ -117,7 +119,6 @@ int main()
                                 // at least one letter has to be a vowel
                                 if (strchr(VOWELS, CTR) == NULL && strchr(VOWELS, SIX[0]) == NULL && strchr(VOWELS, SIX[1]) == NULL && strchr(VOWELS, SIX[2]) == NULL && strchr(VOWELS, SIX[3]) == NULL && strchr(VOWELS, SIX[4]) == NULL && strchr(VOWELS, SIX[5]) == NULL)
                                 {
-                                    printf("Center: %c, Six: %s, No Vowels\n", CTR, SIX);
                                     continue;
                                 }
                                 combos++;
@@ -156,6 +157,10 @@ int main()
                                         pangCount++;
                                     }
                                 }
+                                if (pangCount > 0)
+                                {
+                                    combosWithPangram++;
+                                }
                                 if (solCount > maxSolCount)
                                 {
                                     maxSolCount = solCount;
@@ -179,6 +184,7 @@ int main()
     }
     printf("Total time: %ld\n", time(NULL) - startTime);
     printf("Total Combos: %ld\n", combos);
+    printf("Total Combos with Pangram: %ld\n", combosWithPangram);
     fclose(outFile);
     free(words);
     return 0;
