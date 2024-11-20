@@ -1,0 +1,35 @@
+import util.
+
+main =>
+    Ctr = 'i',
+    Six = "todrym",
+    DictFile = 'words_alpha.txt',
+    read_file_lines(DictFile) = Words,
+    Solution = [W : W in Words, len(W) > 3, membchk(Ctr, W), issubset(W, [Ctr]++Six)],
+    Pangram = [W : W in Solution, sort_remove_dups(W) = sort([Ctr]++Six)],
+    println('--------------------------------------'),
+    print('Ctr: '), println(Ctr),
+    print('Six: '), println(Six),
+    println('--------------------------------------'),
+    FirstLtr = sort_remove_dups([head(W) : W in Solution]),
+    foreach (F in FirstLtr) 
+        FSolvs := [W : W in Solution, head(W) = F],
+        print(F), print(' '), print(len(FSolvs)), println(' '), 
+        println(FSolvs),
+        println(' ')
+    end,
+    println('--------------------------------------'),
+    print('Number words:'), println(len(Solution)),
+    print('Pangram:'), println(Pangram).
+
+% We could have used ordered set, which has this subset, but it's another import
+issubset([], _) => true.
+issubset([H|T], S) => membchk(H, S), issubset(T, S).
+
+% unique(XS) = R =>
+%     if len(XS) < 2 then
+%         R = XS
+%     else
+%         XS = [H|T], 
+%         R = [H|unique([X : X in T, X != H])]
+%     end.
