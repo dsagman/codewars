@@ -4,7 +4,7 @@ Find all possible pangrams from a list of words
 from collections import defaultdict
 
 dictionary = 'words_alpha.txt'
-# dictionary ='/usr/share/dict/words'
+dictionary ='/usr/share/dict/words'
 pangrams_file = 'nyt_pangrams.txt'
 with open(dictionary) as f:
     words = f.read().splitlines()
