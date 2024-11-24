@@ -14,7 +14,7 @@ with open(dictionary) as f:
 # Must include the center letter
 # Pangram has all 7 letters
 # Unwritten rules:
-#     One or two vowels
+#     1<= vowels <= 3
 #     No letter s
 #     If q then u
 #     x is not the center letter
@@ -32,7 +32,7 @@ for k, v in pangrams_dict.items():
         continue
     vowels = sum([1 for l in set(k) if l in 'aeiou'])
     # all words have at least one vowel so no check for 0 vowels
-    if vowels > 2:
+    if vowels > 3:
         continue
     nyt_pangrams[k].append(v)
 
