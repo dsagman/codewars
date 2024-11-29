@@ -4,7 +4,7 @@ Find all possible pangrams from a list of words
 from collections import defaultdict
 
 dictionary = 'words_alpha.txt'
-dictionary ='/usr/share/dict/words'
+# dictionary ='/usr/share/dict/words'
 pangrams_file = 'nyt_pangrams.txt'
 with open(dictionary) as f:
     words = f.read().splitlines()
@@ -38,7 +38,7 @@ for k, v in pangrams_dict.items():
 
 num_nyt_pangrams_no_x = len([k for k in nyt_pangrams.keys() if 'x' not in k])
 num_nyt_pangrams_x = len(nyt_pangrams) - num_nyt_pangrams_no_x
-num_nyt_puzzles = 6*num_nyt_pangrams_no_x + 7*num_nyt_pangrams_x
+num_nyt_puzzles = 7*num_nyt_pangrams_no_x + 6*num_nyt_pangrams_x
 
 with open(pangrams_file, 'w') as f:
     for k, v in nyt_pangrams.items():
