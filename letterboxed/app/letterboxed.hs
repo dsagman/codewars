@@ -62,7 +62,8 @@ main = do
                   'n' -> False
                   _   -> False
 
-  let dictFile = "/usr/share/dict/words"
+  -- let dictFile = "/usr/share/dict/words"
+  let dictFile = "words_alpha.txt"
   wordList <- readFile dictFile
   let wordsBase = filter (\w -> length w >= 3 && length w <= 9 &&
                     all isLower w &&

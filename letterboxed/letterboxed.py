@@ -56,12 +56,13 @@ def get_words(dict_file):
         
 if __name__ == '__main__':
     # puzzle = 'xnimalpjyegf'
-    puzzle = 'nosumailtcvr'
+    # puzzle = 'nosumailtcvr'
     # puzzle = 'vkspyielurao'
     # puzzle = 'htubroqdeisw'
+    puzzle = 'uxofatnhecdr'
     
-    dict_file = '/usr/share/dict/words'
-    # dict_file = 'nytimes_games/words_alpha.txt'
+    # dict_file = '/usr/share/dict/words'
+    dict_file = 'words_alpha.txt'
     words = get_words(dict_file)
     print(f'Number of words imported: {Fore.BLUE}{len(words):,}{Fore.WHITE}')
     
@@ -79,11 +80,11 @@ if __name__ == '__main__':
     words_combo = [Combo([words_dict[w]], words_bitmask[w]) for w in words_valid]
     valid_2_idx = puz_idx(2, words_combo, words_valid, puzzle, words_bitmask)
     valid_3_idx = puz_idx(3, valid_2_idx, words_valid, puzzle, words_bitmask)
-    # valid_4_idx = puz_idx(4, valid_3_idx, words_valid, puzzle, words_bitmask)
+    valid_4_idx = puz_idx(4, valid_3_idx, words_valid, puzzle, words_bitmask)
     
     valid_2 = puz(2, words_valid, first_dict, puzzle)
     valid_3 = puz(3, valid_2, first_dict, puzzle)
-    # valid_4 = puz(4, valid_3, first_dict, puzzle)
+    valid_4 = puz(4, valid_3, first_dict, puzzle)
     # valid_5 = puz(5, valid_4, first_dict, puzzle)
     
     
