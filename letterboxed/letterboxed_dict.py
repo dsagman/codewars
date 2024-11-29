@@ -27,9 +27,12 @@ def get_words(dict_file):
         
 if __name__ == '__main__':
     # puzzle = 'xnimalpjyegf'
-    puzzle = 'nosumailtcvr'
+    # puzzle = 'nosumailtcvr'
+    puzzle = 'uxofatnhecdr'
+
     
-    words = get_words('/usr/share/dict/words')
+    # words = get_words('/usr/share/dict/words')
+    words = get_words('words_alpha.txt')
     print(f'Number of words imported: {Fore.BLUE}{len(words):,}{Fore.WHITE}')
 
     words_valid = [w for w in words 
