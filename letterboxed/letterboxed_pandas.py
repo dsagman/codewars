@@ -74,7 +74,7 @@ def get_bitmask(puzzle, w):
 def get_words(dict_file):
     with open(dict_file) as f:
         words = f.read().splitlines()
-    return [w for w in words if len(w) >= 3 and w[0].islower() and w.isalpha()]
+    return [w for w in words if len(w) >= 3 and len(w) <= 12 and w[0].islower() and w.isalpha()]
         
 if __name__ == '__main__':
     # puzzle = 'xnimalpjyegf'
