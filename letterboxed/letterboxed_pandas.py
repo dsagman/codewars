@@ -58,10 +58,13 @@ def puz_pd(num):
     end_time = time.perf_counter()   
     print(f'{num} word elapsed time: {Fore.BLUE}{end_time - start_time:.2f} seconds{Fore.WHITE}')
     print(f'Sample of {num} word solutions: ', Fore.GREEN) 
-    samples = soldf[soldf.columns[soldf.columns.str.startswith('id')]].sample(n=10).values
-    for s in samples:
-        s_words = ' '.join([words_valid[i] for i in s])
-        print(f'\t{Fore.GREEN}{s_words}{Fore.WHITE}')
+    try:
+        samples = soldf[soldf.columns[soldf.columns.str.startswith('id')]].sample(n=10, replace=True).values
+        for s in samples:
+            s_words = ' '.join([words_valid[i] for i in s])
+            print(f'\t{Fore.GREEN}{s_words}{Fore.WHITE}')
+    except:
+        print('No solutions found')
     return
 
 def get_bitmask(puzzle, w):
@@ -71,10 +74,10 @@ def get_bitmask(puzzle, w):
             bitmask |= (1 << i)
     return bitmask
 
-def get_words(dict_file):
+def get_words(dict_file, min_len=3, max_len=9):
     with open(dict_file) as f:
         words = f.read().splitlines()
-    return [w for w in words if len(w) >= 3 and len(w) <= 12 and w[0].islower() and w.isalpha()]
+    return [w for w in words if len(w) >= min_len and len(w) <= max_len and w[0].islower() and w.isalpha()]
         
 if __name__ == '__main__':
     # puzzle = 'xnimalpjyegf'
@@ -84,9 +87,9 @@ if __name__ == '__main__':
     puzzle = 'uxofatnhecdr'
     all_bits = 2**len(puzzle) - 1
     
-    # dict_file = '/usr/share/dict/words'
-    dict_file = 'words_alpha.txt'
-    words = get_words(dict_file)
+    dict_file = '/usr/share/dict/words'
+    # dict_file = 'words_alpha.txt'
+    words = get_words(dict_file, min_len=3, max_len=9)
     print(f'Number of words imported: {Fore.BLUE}{len(words):,}{Fore.WHITE}')
     
     words_valid = [w for w in words 
