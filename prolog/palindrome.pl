@@ -12,3 +12,4 @@ reverse_string(S, R) :-
 palindrome(S) :-
     reverse_string(S, R),
     S = R.
+
