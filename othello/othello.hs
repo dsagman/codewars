@@ -90,7 +90,7 @@ allNeighbors board = map (`neighbors` board) [0..99]
 neighbors :: Int -> Board -> Neighbors
 neighbors idx board =
     let bidx = boardIdx board
-    in foldr categorize (Neighbors [] [] [] [] [] [] [] []) bidx
+    in fixReversed $ foldr categorize (Neighbors [] [] [] [] [] [] [] []) bidx
   where
     row = idx `div` boardN
     col = idx `mod` boardN
@@ -108,6 +108,12 @@ neighbors idx board =
               colB = b `mod` boardN
               nw_se = (b - idx) `mod` (boardN + 1)
               ne_sw = (b - idx) `mod` (boardN - 1)
+    fixReversed ns = ns
+        { left   = reverse (left ns)
+        , up     = reverse (up ns)
+        , diagNE = reverse (diagNE ns)
+        , diagNW = reverse (diagNW ns)
+        }
 
 -- 0  1  2  3  4  5  6  7   
 -- 8  9 10 11 12 13 14 15
