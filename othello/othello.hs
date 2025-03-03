@@ -37,10 +37,28 @@ data Neighbors = Neighbors
   } deriving (Show)
 
 boardN :: Int
-boardN = 8
+boardN = 8 -- change to 10 if we use walls for out of bound
 
 boardIdx :: Board -> BoardIdx
-boardIdx = zip [0..99]
+boardIdx = zip [0..boardN*boardN-1]
+
+idxToAlg :: Int -> String
+idxToAlg idx = [toEnum (97 + (idx `mod` boardN)), toEnum (49 + (idx `div` boardN))]
+
+-- The board is a single linked list from 0 to 63
+-- Algebraic notation (als chess) is used to identify the cells
+-- e.g., a1 is 0, h8 is 63
+
+--           a  b  c  d  e  f  g  h
+--          -----------------------
+--      1 |  0  1  2  3  4  5  6  7   
+--      2 |  8  9 10 11 12 13 14 15
+--      3 | 16 17 18 19 20 21 22 23
+--      4 | 24 25 26 27 28 29 30 31
+--      5 | 32 33 34 35 36 37 38 39
+--      6 | 40 41 42 43 44 45 46 47
+--      7 | 48 49 50 51 52 53 54 55
+--      8 | 56 57 58 59 60 61 62 63
 
 -- With walls for out of bounds. Not sure we need this.
 -- initialBoard :: Board
@@ -63,14 +81,14 @@ showBoard :: Board -> IO ()
 showBoard board = do
     putStrLn ""
     putStrLn "  a b c d e f g h"
-    mapM_ putStrLn (zipWith showRow [0..] (chunksOf boardN board))
+    mapM_ putStrLn (zipWith showRow [1..] (chunksOf boardN board))
     putStrLn "  a b c d e f g h"
     let blackCount = length (filter (== Black) board)
     let whiteCount = length (filter (== White) board)
     putStrLn $ "  Black: " ++ show blackCount ++ " White: " ++ show whiteCount
     putStrLn ""
   where
-    showRow rowIndex xs = show rowIndex ++ " " ++ unwords (map show (init (tail xs))) ++ " " ++ show rowIndex -- Row number
+    showRow rowIndex xs = show rowIndex ++ " " ++ unwords (map show xs) ++ " " ++ show rowIndex -- Row number
         -- | all (== Wall) xs = "  "
         -- | otherwise = show rowIndex ++ " " ++ unwords (map show (init (tail xs))) ++ " " ++ show rowIndex -- Row number
 
@@ -120,15 +138,6 @@ neighbors idx board =
         , diagSW = blank : diagSW ns
         }
 
--- 0  1  2  3  4  5  6  7   
--- 8  9 10 11 12 13 14 15
---16 17 18 19 20 21 22 23
---24 25 26 27 28 29 30 31
---32 33 34 35 36 37 38 39
---40 41 42 43 44 45 46 47
---48 49 50 51 52 53 54 55
---56 57 58 59 60 61 62 63
-
 emptyNeighbors :: Board -> [Neighbors]
 emptyNeighbors board = map (`neighbors` board) emptyIdx
     where emptyIdx = map fst $ filter ((== Empty) . snd) $ boardIdx board
@@ -175,16 +184,18 @@ isP :: Player -> Cell
 isP BlackP = Black
 isP WhiteP = White
 
+switchP :: Player -> Player
+switchP BlackP = WhiteP
+switchP WhiteP = BlackP
+
 setCell :: Player -> Int -> Board -> Board
-setCell player cell board =
-    case player of
-        BlackP -> before ++ Black : after
-        WhiteP -> before ++ White : after
+setCell player cell board = before ++ isP player : after
     where (before, _ : after) = splitAt cell board
 
 flipCells :: Player -> Board -> BoardIdx -> Board
 flipCells player = foldr (setCell player . fst)
 
+-- some tests
 tb1 :: Board
 tb1 = setCell WhiteP 20 initialBoard
 tb2 :: Board
@@ -193,17 +204,46 @@ tb2 = setCell WhiteP 12 tb1
 tb1_poss :: [BoardIdx]
 tb1_poss = possiblePlays BlackP tb2
 
-tmoveB = flipCells BlackP initialBoard (head $ possiblePlays BlackP initialBoard)
-tmoveW = flipCells WhiteP tmoveB (head $ possiblePlays WhiteP tmoveB)
+tmove1 :: Board
+tmove1 = flipCells BlackP initialBoard (head $ possiblePlays BlackP initialBoard)
+
+tmove2 :: Board
+tmove2 = flipCells WhiteP tmove1 (head $ possiblePlays WhiteP tmove1)
+
+tmove3 :: Board
+tmove3 = flipCells BlackP tmove2 (head $ possiblePlays BlackP tmove2)
+
+testMoves n board = take (n + 1) $ iterate nextMove (board, BlackP, Nothing)
+  where
+    nextMove (b, player, _) =
+      case possiblePlays player b of
+        (move : _) -> (flipCells player b move, switchP player, Just (fst $ head move))
+        []         -> (b, switchP player, Nothing)  -- Skip if no valid move
+
 
 main :: IO ()
 main = do
     putStrLn "Hello, Haskell!"
-    showBoard initialBoard
+    mapM_ printMove (testMoves 5 initialBoard)
     putStrLn "So much left to do"
+  
+printMove :: (Board, Player, Maybe Int) -> IO ()
+printMove (board, player,idx) = do
+    putStrLn $ "Player: " ++ show (opP player)
+    case idx of
+        Just i -> putStrLn $ "Moved: " ++ show (idxToAlg i)
+        Nothing -> putStrLn "No move"
+    showBoard board
 
 
 
+
+
+
+
+
+-- with walls
+-- but currently not using
 
 -- 0  1  2  3  4  5  6  7  8  9
 --10 11 12 13 14 15 16 17 18 19
