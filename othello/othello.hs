@@ -6,6 +6,7 @@
 
 module Main where
 import Data.List.Extra
+import Data.Maybe
 
 data Cell = Empty | Black | White | Wall
   deriving (Eq)
@@ -84,9 +85,6 @@ printNeighbors idx board = do
     putStrLn $ "DiagSE: " ++ show (diagSE n)
     putStrLn $ "DiagSW: " ++ show (diagSW n)
 
-allNeighbors :: Board -> [Neighbors]
-allNeighbors board = map (`neighbors` board) [0..99]
-
 neighbors :: Int -> Board -> Neighbors
 neighbors idx board =
     let bidx = boardIdx board
@@ -95,10 +93,10 @@ neighbors idx board =
     row = idx `div` boardN
     col = idx `mod` boardN
     categorize (b, x) ns
-        | rowB == row && b < idx               = ns { left = (b, x) : left ns }
-        | rowB == row && b > idx               = ns { right = (b, x) : right ns }
-        | colB == col && b < idx               = ns { up = (b, x) : up ns }
-        | colB == col && b > idx               = ns { down = (b, x) : down ns }
+        | rowB == row && b < idx               = ns { left   = (b, x) : left   ns }
+        | rowB == row && b > idx               = ns { right  = (b, x) : right  ns }
+        | colB == col && b < idx               = ns { up     = (b, x) : up     ns }
+        | colB == col && b > idx               = ns { down   = (b, x) : down   ns }
         | nw_se == 0  && b < idx && colB < col = ns { diagNW = (b, x) : diagNW ns }
         | nw_se == 0  && b > idx && colB > col = ns { diagSE = (b, x) : diagSE ns }
         | ne_sw == 0  && b < idx && colB > col = ns { diagNE = (b, x) : diagNE ns }
@@ -108,11 +106,17 @@ neighbors idx board =
               colB = b `mod` boardN
               nw_se = (b - idx) `mod` (boardN + 1)
               ne_sw = (b - idx) `mod` (boardN - 1)
-    fixReversed ns = ns
-        { left   = reverse (left ns)
-        , up     = reverse (up ns)
-        , diagNE = reverse (diagNE ns)
-        , diagNW = reverse (diagNW ns)
+    fixReversed ns =
+        let blank = (idx, Empty) in
+        ns
+        { left   = blank : reverse (left ns)
+        , up     = blank : reverse (up ns)
+        , diagNE = blank : reverse (diagNE ns)
+        , diagNW = blank : reverse (diagNW ns)
+        , right  = blank : right ns
+        , down   = blank : down ns
+        , diagSE = blank : diagSE ns
+        , diagSW = blank : diagSW ns
         }
 
 -- 0  1  2  3  4  5  6  7   
@@ -124,6 +128,76 @@ neighbors idx board =
 --48 49 50 51 52 53 54 55
 --56 57 58 59 60 61 62 63
 
+emptyNeighbors :: Board -> [Neighbors]
+emptyNeighbors board = map (`neighbors` board) emptyIdx
+    where emptyIdx = map fst $ filter ((== Empty) . snd) $ boardIdx board
+
+-- possiblePlays :: Player -> Board -> [(String, BoardIdx)]
+possiblePlays player board = do
+    -- flippable if the second element of the list is the opposite of the player
+    -- and there is at least one element of the list that is the player
+    let flippable = 
+            concatMap (filter (any ((== isp player) . snd) . snd) . findStartsWith player) ens
+    (dir, ns) <- flippable
+    -- we only want the list up to the flippable piece
+    let b = break ((== isp player) . snd) ns
+    -- should be just return b? that's all we neeed to flip
+    -- pure (dir, fst b ++ [head (snd b)])
+    pure (fst b)
+    where ens = emptyNeighbors board
+   
+
+
+-- Function to find neighbor lists that start with Black
+findStartsWith :: Player -> Neighbors -> [(String, BoardIdx)]
+findStartsWith player ns = mapMaybe (checkStart player) neighborLists
+  where
+    neighborLists =
+      [ ("left", left ns)
+      , ("right", right ns)
+      , ("up", up ns)
+      , ("down", down ns)
+      , ("diagNW", diagNW ns)
+      , ("diagNE", diagNE ns)
+      , ("diagSW", diagSW ns)
+      , ("diagSE", diagSE ns)
+      ]
+    -- Check if a given list starts with an opponents piece 
+    checkStart WhiteP (dir, a: (x, Black) : rest) = Just (dir, a: (x, Black) : rest)
+    checkStart BlackP (dir, a: (x, White) : rest) = Just (dir, a: (x, White) : rest)
+    checkStart _ _ = Nothing
+
+opp :: Player -> Cell
+opp player = case player of
+    BlackP -> White
+    WhiteP -> Black
+
+isp :: Player -> Cell
+isp player = case player of
+    BlackP -> Black
+    WhiteP -> White
+
+
+makeMove :: Player -> Int -> Board -> Board
+-- Assumes the move is legal
+makeMove player move board =
+    case player of
+        BlackP -> before ++ Black : after
+        WhiteP -> before ++ White : after
+    where (before, _ : after) = splitAt move board
+
+tb1 = makeMove WhiteP 20 initialBoard
+tb2 = makeMove WhiteP 12 tb1
+
+main :: IO ()
+main = do
+    putStrLn "Hello, Haskell!"
+    showBoard initialBoard
+    putStrLn "So much left to do"
+
+
+
+
 -- 0  1  2  3  4  5  6  7  8  9
 --10 11 12 13 14 15 16 17 18 19
 --20 21 22 23 24 25 26 27 28 29
@@ -134,31 +208,3 @@ neighbors idx board =
 --70 71 72 73 74 75 76 77 78 79
 --80 81 82 83 84 85 86 87 88 89
 --90 91 92 93 94 95 96 97 98 99
-
-
-validP :: [Int]
--- Valid moves are numbers in the range 11-88 that end in 1-8.
-validP = [move | move <- [11..88], (move `mod` 10) `elem` [1..8] ]
-
-legalP :: Player -> Board -> [Int]
--- A Legal move must be into an empty square, and it must
--- flip at least one opponent piece.
-legalP player board = validP
-    where validP = map fst $ filter ((== Empty) . snd) $ boardIdx board
-
-makeMove :: Player -> Int -> Board -> Board
--- Assumes the move is legal
-makeMove player move board =
-    case player of
-        BlackP -> before ++ Black : after
-        WhiteP -> before ++ White : after
-    where (before, _ : after) = splitAt move board
-
-
-
-main :: IO ()
-main = do
-    putStrLn "Hello, Haskell!"
-    showBoard initialBoard
-    putStrLn "So much left to do"
-
