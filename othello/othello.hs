@@ -8,7 +8,8 @@ module Main where
 import Data.List.Extra
 import Data.Maybe
 
-data Cell = Empty | Black | White | Wall
+data Cell = Empty | Black | White
+-- | Wall
   deriving (Eq)
 
 data Player = BlackP | WhiteP
@@ -17,9 +18,9 @@ data Player = BlackP | WhiteP
 instance Show Cell where
     show :: Cell -> String
     show Empty = "·"
-    show Black = "●"
-    show White = "○"
-    show Wall  = "█"
+    show Black = "○"
+    show White = "●"
+    -- show Wall  = "█"
 
 type Board = [Cell]
 type BoardIdx = [(Int, Cell)]
@@ -69,9 +70,9 @@ showBoard board = do
     putStrLn $ "  Black: " ++ show blackCount ++ " White: " ++ show whiteCount
     putStrLn ""
   where
-    showRow rowIndex xs
-        | all (== Wall) xs = "  "
-        | otherwise = show rowIndex ++ " " ++ unwords (map show (init (tail xs))) ++ " " ++ show rowIndex -- Row number
+    showRow rowIndex xs = show rowIndex ++ " " ++ unwords (map show (init (tail xs))) ++ " " ++ show rowIndex -- Row number
+        -- | all (== Wall) xs = "  "
+        -- | otherwise = show rowIndex ++ " " ++ unwords (map show (init (tail xs))) ++ " " ++ show rowIndex -- Row number
 
 printNeighbors :: Int -> Board -> IO ()
 printNeighbors idx board = do
@@ -133,20 +134,19 @@ emptyNeighbors board = map (`neighbors` board) emptyIdx
     where emptyIdx = map fst $ filter ((== Empty) . snd) $ boardIdx board
 
 -- possiblePlays :: Player -> Board -> [(String, BoardIdx)]
+possiblePlays :: Player -> Board -> [BoardIdx]
 possiblePlays player board = do
     -- flippable if the second element of the list is the opposite of the player
     -- and there is at least one element of the list that is the player
-    let flippable = 
-            concatMap (filter (any ((== isp player) . snd) . snd) . findStartsWith player) ens
+    let flippable =
+            concatMap (filter (any ((== isP player) . snd) . snd) . findStartsWith player) ens
     (dir, ns) <- flippable
     -- we only want the list up to the flippable piece
-    let b = break ((== isp player) . snd) ns
+    let b = break ((== isP player) . snd) ns
     -- should be just return b? that's all we neeed to flip
     -- pure (dir, fst b ++ [head (snd b)])
     pure (fst b)
     where ens = emptyNeighbors board
-   
-
 
 -- Function to find neighbor lists that start with Black
 findStartsWith :: Player -> Neighbors -> [(String, BoardIdx)]
@@ -167,27 +167,34 @@ findStartsWith player ns = mapMaybe (checkStart player) neighborLists
     checkStart BlackP (dir, a: (x, White) : rest) = Just (dir, a: (x, White) : rest)
     checkStart _ _ = Nothing
 
-opp :: Player -> Cell
-opp player = case player of
-    BlackP -> White
-    WhiteP -> Black
+opP :: Player -> Cell
+opP BlackP = White
+opP WhiteP = Black
 
-isp :: Player -> Cell
-isp player = case player of
-    BlackP -> Black
-    WhiteP -> White
+isP :: Player -> Cell
+isP BlackP = Black
+isP WhiteP = White
 
-
-makeMove :: Player -> Int -> Board -> Board
--- Assumes the move is legal
-makeMove player move board =
+setCell :: Player -> Int -> Board -> Board
+setCell player cell board =
     case player of
         BlackP -> before ++ Black : after
         WhiteP -> before ++ White : after
-    where (before, _ : after) = splitAt move board
+    where (before, _ : after) = splitAt cell board
 
-tb1 = makeMove WhiteP 20 initialBoard
-tb2 = makeMove WhiteP 12 tb1
+flipCells :: Player -> Board -> BoardIdx -> Board
+flipCells player = foldr (setCell player . fst)
+
+tb1 :: Board
+tb1 = setCell WhiteP 20 initialBoard
+tb2 :: Board
+tb2 = setCell WhiteP 12 tb1
+
+tb1_poss :: [BoardIdx]
+tb1_poss = possiblePlays BlackP tb2
+
+tmoveB = flipCells BlackP initialBoard (head $ possiblePlays BlackP initialBoard)
+tmoveW = flipCells WhiteP tmoveB (head $ possiblePlays WhiteP tmoveB)
 
 main :: IO ()
 main = do
