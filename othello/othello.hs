@@ -8,8 +8,13 @@ module Main where
 import Data.List.Extra
 import Data.Maybe
 
+
+---------------------------------------------
+--
+--          Data Types
+--
+---------------------------------------------
 data Cell = Empty | Black | White
--- | Wall
   deriving (Eq)
 
 data Player = BlackP | WhiteP
@@ -20,33 +25,26 @@ instance Show Cell where
     show Empty = "·"
     show Black = "○"
     show White = "●"
-    -- show Wall  = "█"
 
 type Board = [Cell]
 type BoardIdx = [(Int, Cell)]
 
 data Neighbors = Neighbors
-  { left :: BoardIdx
-    , right :: BoardIdx
-    , up :: BoardIdx
-    , down :: BoardIdx
+  { left     :: BoardIdx
+    , right  :: BoardIdx
+    , up     :: BoardIdx
+    , down   :: BoardIdx
     , diagNE :: BoardIdx
     , diagNW :: BoardIdx
     , diagSE :: BoardIdx
     , diagSW :: BoardIdx
   } deriving (Show)
 
-boardN :: Int
-boardN = 8 -- change to 10 if we use walls for out of bound
-
-boardIdx :: Board -> BoardIdx
-boardIdx = zip [0..boardN*boardN-1]
-
-idxToAlg :: Int -> String
-idxToAlg idx = [toEnum (97 + (idx `mod` boardN)), toEnum (49 + (idx `div` boardN))]
-
-algToIdx :: String -> Int
-algToIdx [c1, c2] = (fromEnum c2 - 49) * boardN + (fromEnum c1 - 97)
+---------------------------------------------
+--
+--          Board setup and indexing
+--
+---------------------------------------------
 
 -- The board is a single linked list from 0 to 63
 -- Algebraic notation (als chess) is used to identify the cells
@@ -63,15 +61,17 @@ algToIdx [c1, c2] = (fromEnum c2 - 49) * boardN + (fromEnum c1 - 97)
 --      7 | 48 49 50 51 52 53 54 55
 --      8 | 56 57 58 59 60 61 62 63
 
--- With walls for out of bounds. Not sure we need this.
--- initialBoard :: Board
--- initialBoard =
---     replicate 10 Wall ++
---     take 30 (cycle (Wall : replicate 8 Empty ++ [Wall])) ++
---     (Wall : replicate 3 Empty ++ [White, Black] ++ replicate 3 Empty ++ [Wall]) ++
---     (Wall : replicate 3 Empty ++ [Black, White] ++ replicate 3 Empty ++ [Wall]) ++
---     take 30 (cycle (Wall : replicate 8 Empty ++ [Wall])) ++
---     replicate 10 Wall
+boardN :: Int
+boardN = 8 
+
+boardIdx :: Board -> BoardIdx
+boardIdx = zip [0..boardN*boardN-1]
+
+idxToAlg :: Int -> String
+idxToAlg idx = [toEnum (97 + (idx `mod` boardN)), toEnum (49 + (idx `div` boardN))]
+
+algToIdx :: String -> Int
+algToIdx [c1, c2] = (fromEnum c2 - 49) * boardN + (fromEnum c1 - 97)
 
 initialBoard :: Board
 initialBoard =
@@ -80,33 +80,35 @@ initialBoard =
     (replicate ((boardN `div` 2)-1) Empty ++ [Black, White] ++ replicate ((boardN `div` 2)-1) Empty) ++
     take (boardN*((boardN `div` 2)-1)) (cycle (replicate boardN Empty))
 
-showBoard :: Board -> IO ()
-showBoard board = do
-    putStrLn ""
-    putStrLn "  a b c d e f g h"
-    mapM_ putStrLn (zipWith showRow [1..] (chunksOf boardN board))
-    putStrLn "  a b c d e f g h"
-    let blackCount = length (filter (== Black) board)
-    let whiteCount = length (filter (== White) board)
-    putStrLn $ "  Black: " ++ show blackCount ++ " White: " ++ show whiteCount
-    putStrLn ""
-  where
-    showRow rowIndex xs = show rowIndex ++ " " ++ unwords (map show xs) ++ " " ++ show rowIndex -- Row number
-        -- | all (== Wall) xs = "  "
-        -- | otherwise = show rowIndex ++ " " ++ unwords (map show (init (tail xs))) ++ " " ++ show rowIndex -- Row number
+---------------------------------------------
+--
+--          Player utility functions
+--
+---------------------------------------------
 
-printNeighbors :: Int -> Board -> IO ()
-printNeighbors idx board = do
-    let n = neighbors idx board
-    putStrLn $ "Left: " ++ show (left n)
-    putStrLn $ "Right: " ++ show (right n)
-    putStrLn $ "Up: " ++ show (up n)
-    putStrLn $ "Down: " ++ show (down n)
-    putStrLn $ "DiagNE: " ++ show (diagNE n)
-    putStrLn $ "DiagNW: " ++ show (diagNW n)
-    putStrLn $ "DiagSE: " ++ show (diagSE n)
-    putStrLn $ "DiagSW: " ++ show (diagSW n)
+opP :: Player -> Cell
+opP BlackP = White
+opP WhiteP = Black
 
+isP :: Player -> Cell
+isP BlackP = Black
+isP WhiteP = White
+
+switchP :: Player -> Player
+switchP BlackP = WhiteP
+switchP WhiteP = BlackP
+
+---------------------------------------------
+--
+--          Move finding functions
+--
+---------------------------------------------
+
+---------------------------------------------
+-- neighbors finds all of the pieces in all of directions from a given index
+-- Efficient because it makes a single pass through the entire board
+--      and fills in all the direction records in one go
+---------------------------------------------
 neighbors :: Int -> Board -> Neighbors
 neighbors idx board =
     let bidx = boardIdx board
@@ -141,26 +143,40 @@ neighbors idx board =
         , diagSW = blank : diagSW ns
         }
 
+---------------------------------------------
+-- Only legal moves are on empty cells
+-- Returns a list of neighbors for each empty cell
+---------------------------------------------
 emptyNeighbors :: Board -> [Neighbors]
 emptyNeighbors board = map (`neighbors` board) emptyIdx
     where emptyIdx = map fst $ filter ((== Empty) . snd) $ boardIdx board
 
--- possiblePlays :: Player -> Board -> [(String, BoardIdx)]
+---------------------------------------------
+-- All possible plays for a given player
+-- Flippable is if the second element of the list is the opposite of the player,
+--            and there is at least one element of the list that is the player
+-- Returns a list of tuples where the first element is the index of a valid move
+--            and the rest of the list are the cells that can be flipped
+-- flipList contains only want the list up to the opponent's piece, 
+--            and we don't need the direction anymore
+-- Has duplicate keys for different directions, use allDirectionPlays to combine
+---------------------------------------------
 possiblePlays :: Player -> Board -> [BoardIdx]
 possiblePlays player board = do
-    -- flippable if the second element of the list is the opposite of the player
-    -- and there is at least one element of the list that is the player
     let flippable =
             concatMap (filter (any ((== isP player) . snd) . snd) . findStartsWith player) ens
     (dir, ns) <- flippable
-    -- we only want the list up to the flippable piece
-    let b = break ((== isP player) . snd) ns
-    -- should be just return b? that's all we neeed to flip
-    -- pure (dir, fst b ++ [head (snd b)])
-    pure (fst b)
+    let flipList = takeWhile ((/= isP player) . snd) ns
+    pure flipList
     where ens = emptyNeighbors board
-
--- Function to find neighbor lists that start with Black
+    
+---------------------------------------------
+-- Function to find neighbor lists that start with opponet's piece
+-- This means we can flip pieces in that direction
+-- Returns both the possible plays and the direction
+-- checkStart is a helper function to check if the list starts with an opponent's piece
+-- Used in possiblePlays
+---------------------------------------------
 findStartsWith :: Player -> Neighbors -> [(String, BoardIdx)]
 findStartsWith player ns = mapMaybe (checkStart player) neighborLists
   where
@@ -174,29 +190,144 @@ findStartsWith player ns = mapMaybe (checkStart player) neighborLists
       , ("diagSW", diagSW ns)
       , ("diagSE", diagSE ns)
       ]
-    -- Check if a given list starts with an opponents piece 
     checkStart WhiteP (dir, a: (x, Black) : rest) = Just (dir, a: (x, Black) : rest)
     checkStart BlackP (dir, a: (x, White) : rest) = Just (dir, a: (x, White) : rest)
     checkStart _ _ = Nothing
 
-opP :: Player -> Cell
-opP BlackP = White
-opP WhiteP = Black
+---------------------------------------------
+-- Combine multiple direction possible move keys into one list
+-- Uses possiblePlays to get the list of possible move indexes (keys)
+-- ***Not efficient because it filters over every unique key
+--    maybe use a HashMap?
+---------------------------------------------
+allDirectionPlays :: Player -> Board -> [BoardIdx]
+allDirectionPlays player board = do
+    let possible = possiblePlays player board
+    let uniqueIdx = nub $ map (fst . head) possible
+    [(idx,Empty): concatMap tail (filter ((==idx) . fst . head) possible) | idx <- uniqueIdx]
 
-isP :: Player -> Cell
-isP BlackP = Black
-isP WhiteP = White
+---------------------------------------------
+--
+--          Move making functions
+--
+---------------------------------------------
 
-switchP :: Player -> Player
-switchP BlackP = WhiteP
-switchP WhiteP = BlackP
+---------------------------------------------
+-- flipCells assumes the move is valid
+-- Flips all the cells in the list of cells
+-- use with allDirectionPlays
+---------------------------------------------
+flipCells :: Player -> Board -> BoardIdx -> Board
+flipCells player = foldr (setCell player . fst)
 
+---------------------------------------------
+-- setCell is a helper function to set a cell to a player
+-- Used in flipCells
+-- possibly inefficient due to list concatenation
+---------------------------------------------
 setCell :: Player -> Int -> Board -> Board
 setCell player cell board = before ++ isP player : after
     where (before, _ : after) = splitAt cell board
 
-flipCells :: Player -> Board -> BoardIdx -> Board
-flipCells player = foldr (setCell player . fst)
+---------------------------------------------
+--
+--          Main function
+--
+---------------------------------------------
+
+main :: IO ()
+main = do
+    putStrLn "Let's Play Othello!"
+    showBoard edgeBoard
+    putStrLn "Your move!"
+    let possHmoves = allDirectionPlays BlackP edgeBoard
+    hMove <- getInput possHmoves
+    print hMove
+    let hFlips = concat $ filter ((==hMove) . fst . head) possHmoves
+    print hFlips
+    let board' = flipCells BlackP edgeBoard hFlips
+    showBoard board'
+    -- do a computer play
+    -- for the selected move
+    let cMove = fst . head . head $ allDirectionPlays WhiteP board'
+    print $ "I choose: " ++ idxToAlg cMove ++ "!"
+    -- make sure to get all possible directions and concat them 
+    let possCmoves = allDirectionPlays WhiteP board'
+    let cFlips = concat $ filter ((==cMove) . fst . head) possCmoves
+    let board'' = flipCells WhiteP board' cFlips
+    showBoard board''
+
+    -- let newBoard = flipCells BlackP initialBoard move
+    -- mapM_ printMove (testMoves 5 initialBoard)
+    putStrLn "So much left to do"
+
+---------------------------------------------
+--
+--          I/O functions
+--
+---------------------------------------------
+
+getInput :: [BoardIdx] -> IO Int
+getInput legalMoves = do
+    putStrLn "Enter a move (e.g., a1):"
+    inputLine <- getLine
+    case parseInput inputLine legalMoves of
+        Just i -> return i
+        Nothing -> putStrLn "Invalid move" >> getInput legalMoves
+
+parseInput :: String -> [BoardIdx] -> Maybe Int
+parseInput s legalMoves =
+  if length s == 2 &&
+    all (`elem` ['a'..'h']) (take 1 s) &&
+    all (`elem` ['1'..'8']) (drop 1 s) &&
+    elem (algToIdx s) (map fst (concat legalMoves)) -- move is possible
+    then Just $ algToIdx s
+    else Nothing
+
+showBoard :: Board -> IO ()
+showBoard board = do
+    putStrLn ""
+    putStrLn "  a b c d e f g h"
+    mapM_ putStrLn (zipWith showRow [1..] (chunksOf boardN board))
+    putStrLn "  a b c d e f g h"
+    let blackCount = length (filter (== Black) board)
+    let whiteCount = length (filter (== White) board)
+    putStrLn $ "  Black: " ++ show blackCount ++ " White: " ++ show whiteCount
+    putStrLn ""
+  where
+    showRow rowIndex xs = show rowIndex ++ " " ++ unwords (map show xs) ++ " " ++ show rowIndex -- Row number
+
+---------------------------------------------
+--
+--        Debugging functions
+--
+---------------------------------------------
+
+printNeighbors :: Int -> Board -> IO ()
+printNeighbors idx board = do
+    let n = neighbors idx board
+    putStrLn $ "Left: " ++ show (left n)
+    putStrLn $ "Right: " ++ show (right n)
+    putStrLn $ "Up: " ++ show (up n)
+    putStrLn $ "Down: " ++ show (down n)
+    putStrLn $ "DiagNE: " ++ show (diagNE n)
+    putStrLn $ "DiagNW: " ++ show (diagNW n)
+    putStrLn $ "DiagSE: " ++ show (diagSE n)
+    putStrLn $ "DiagSW: " ++ show (diagSW n)
+
+printMove :: (Board, Player, Maybe Int) -> IO ()
+printMove (board, player, idx) = do
+    putStrLn $ "Player: " ++ show (opP player)
+    case idx of
+        Just i -> putStrLn $ "Moved: " ++ show (idxToAlg i)
+        Nothing -> putStrLn "No move"
+    showBoard board
+
+---------------------------------------------
+--
+--          Tests
+--
+---------------------------------------------
 
 -- some tests
 tb1 :: Board
@@ -205,24 +336,25 @@ tb2 :: Board
 tb2 = setCell WhiteP 12 tb1
 
 tb1_poss :: [BoardIdx]
-tb1_poss = possiblePlays BlackP tb2
+tb1_poss = allDirectionPlays BlackP tb2
 
 tmove1 :: Board
-tmove1 = flipCells BlackP initialBoard (head $ possiblePlays BlackP initialBoard)
+tmove1 = flipCells BlackP initialBoard (head $ allDirectionPlays BlackP initialBoard)
 
 tmove2 :: Board
-tmove2 = flipCells WhiteP tmove1 (head $ possiblePlays WhiteP tmove1)
+tmove2 = flipCells WhiteP tmove1 (head $ allDirectionPlays WhiteP tmove1)
 
 tmove3 :: Board
-tmove3 = flipCells BlackP tmove2 (head $ possiblePlays BlackP tmove2)
+tmove3 = flipCells BlackP tmove2 (head $ allDirectionPlays BlackP tmove2)
 
 testMoves n board = take (n + 1) $ iterate nextMove (board, BlackP, Nothing)
   where
     nextMove (b, player, _) =
-      case possiblePlays player b of
+      case allDirectionPlays player b of
         (move : _) -> (flipCells player b move, switchP player, Just (fst $ head move))
         []         -> (b, switchP player, Nothing)  -- Skip if no valid move
 
+-- a board with flips in multiple directions, for example black c1
 edgeBoard :: Board
 edgeBoard = do
   let b = foldr (setCell BlackP) initialBoard blackCells
@@ -233,52 +365,56 @@ edgeBoard = do
         whiteCells = [8,9,10,11,12,13,14,15]
 
 
-main :: IO ()
-main = do
-    putStrLn "Let's Play Othello!"
-    showBoard edgeBoard
-    putStrLn "Your move!"
-    hMoveAlg <- getLine
-    -- need to handle failure
-    let hMove = algToIdx hMoveAlg
-    print hMove
-    let possHmoves = possiblePlays BlackP edgeBoard
-    -- make sure we get all possible directions and concat them
-    let hFlips = concat $ filter ((==hMove) . fst . head) possHmoves 
-    print hFlips
-    let board' = flipCells BlackP edgeBoard hFlips
-    showBoard board'
-    -- do a computer play
-    -- for the selected move
-    let cMove = fst. head . head $ possiblePlays WhiteP board'
-    print $ "I choose: " ++ idxToAlg cMove ++ "!"
-    -- make sure to get all possible directions and concat them 
-    let possCmoves = possiblePlays WhiteP board'
-    let cFlips = concat $ filter ((==cMove) . fst . head) possCmoves
-    let board'' = flipCells WhiteP board' cFlips
-    showBoard board''
+---------------------------------------------
+--
+--          Dead Code
+--
+---------------------------------------------
 
-    -- let newBoard = flipCells BlackP initialBoard move
-    -- mapM_ printMove (testMoves 5 initialBoard)
-    putStrLn "So much left to do"
-  
-printMove :: (Board, Player, Maybe Int) -> IO ()
-printMove (board, player,idx) = do
-    putStrLn $ "Player: " ++ show (opP player)
-    case idx of
-        Just i -> putStrLn $ "Moved: " ++ show (idxToAlg i)
-        Nothing -> putStrLn "No move"
-    showBoard board
+-- Not using walls for out of bounds
 
+-- data Cell = Empty | Black | White
+--  | Wall
+--   deriving (Eq)
 
+-- data Player = BlackP | WhiteP
+--   deriving (Eq, Show)
 
+-- instance Show Cell where
+--     show :: Cell -> String
+--     show Empty = "·"
+--     show Black = "○"
+--     show White = "●"
+--     show Wall  = "█"
 
+-- boardN :: Int
+-- boardN = 8 -- change to 10 if we use walls for out of bound
 
+-- With walls for out of bounds. Not sure we need this.
+-- initialBoard :: Board
+-- initialBoard =
+--     replicate 10 Wall ++
+--     take 30 (cycle (Wall : replicate 8 Empty ++ [Wall])) ++
+--     (Wall : replicate 3 Empty ++ [White, Black] ++ replicate 3 Empty ++ [Wall]) ++
+--     (Wall : replicate 3 Empty ++ [Black, White] ++ replicate 3 Empty ++ [Wall]) ++
+--     take 30 (cycle (Wall : replicate 8 Empty ++ [Wall])) ++
+--     replicate 10 Wall
 
+-- showBoard :: Board -> IO ()
+-- showBoard board = do
+--     putStrLn ""
+--     putStrLn "  a b c d e f g h"
+--     mapM_ putStrLn (zipWith showRow [1..] (chunksOf boardN board))
+--     putStrLn "  a b c d e f g h"
+--     let blackCount = length (filter (== Black) board)
+--     let whiteCount = length (filter (== White) board)
+--     putStrLn $ "  Black: " ++ show blackCount ++ " White: " ++ show whiteCount
+--     putStrLn ""
+--   where
+--     showRow rowIndex xs = show rowIndex ++ " " ++ unwords (map show xs) ++ " " ++ show rowIndex -- Row number
+--         | all (== Wall) xs = "  "
+--         | otherwise = show rowIndex ++ " " ++ unwords (map show (init (tail xs))) ++ " " ++ show rowIndex -- Row number
 
-
--- with walls
--- but currently not using
 
 -- 0  1  2  3  4  5  6  7  8  9
 --10 11 12 13 14 15 16 17 18 19
