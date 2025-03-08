@@ -76,6 +76,9 @@ idxToAlg idx = [toEnum (97 + (idx `mod` boardN)), toEnum (49 + (idx `div` boardN
 algToIdx :: String -> Int
 algToIdx [c1, c2] = (fromEnum c2 - 49) * boardN + (fromEnum c1 - 97)
 
+getFstIdx :: BoardIdx -> Int
+getFstIdx = fst . head
+
 initialBoard :: Board
 initialBoard =
     take (boardN*((boardN `div` 2)-1)) (cycle (replicate boardN Empty)) ++
@@ -206,8 +209,8 @@ findStartsWith player ns = mapMaybe (checkStart player) neighborLists
 allDirectionPlays :: Player -> Board -> [BoardIdx]
 allDirectionPlays player board = do
     let possible = possiblePlays player board
-    let uniqueIdx = nub $ map (fst . head) possible
-    [(idx,Empty): concatMap tail (filter ((==idx) . fst . head) possible) | idx <- uniqueIdx]
+    let uniqueIdx = nub $ map getFstIdx possible
+    [(idx,Empty): concatMap tail (filter ((==idx) . getFstIdx) possible) | idx <- uniqueIdx]
 
 ---------------------------------------------
 --
@@ -275,6 +278,33 @@ getWeightedScore player board =
         | c == opP player = s - w
         | otherwise = s
 
+
+---------------------------------------------
+--
+--          Minimax functions
+--
+---------------------------------------------
+-- minimax :: Player -> Board -> Int
+-- minimax player board = do
+--     let possMoves = allDirectionPlays player board
+--     let scores = map (minimax' (switchP player) . flipCells player board) possMoves
+--     if null scores then getWeightedScore player board else maximum scores
+
+-- minimax' :: Player -> Board -> Int
+-- minimax' player board = do
+--     let possMoves = allDirectionPlays player board
+--     let scores = map (minimax (switchP player) . flipCells player board) possMoves
+--     if null scores then getWeightedScore player board else minimum scores
+
+maxMove :: Player -> Board -> (Int, BoardIdx)
+maxMove player board = do
+    let validMoves = allDirectionPlays player board
+    let scores = map (getWeightedScore player . flipCells player board) validMoves
+    foldr1 acc (zip scores validMoves)
+    where acc (w, ms) (w', ms') = if w > w' then (w, ms) else (w', ms')
+    --- TODO: Have to fix to handle no valid moves
+
+
 ---------------------------------------------
 --
 --          Main function
@@ -289,18 +319,15 @@ main = do
     let possHmoves = allDirectionPlays BlackP edgeBoard
     hMove <- getInput possHmoves
     print hMove
-    let hFlips = concat $ filter ((==hMove) . fst . head) possHmoves
+    let hFlips = concat $ filter ((==hMove) . getFstIdx) possHmoves
     print hFlips
     let board' = flipCells BlackP edgeBoard hFlips
     showBoard board'
     -- do a computer play
-    -- for the selected move
-    let cMove = fst . head . head $ allDirectionPlays WhiteP board'
-    print $ "I choose: " ++ idxToAlg cMove ++ "!"
-    -- make sure to get all possible directions and concat them 
-    let possCmoves = allDirectionPlays WhiteP board'
-    let cFlips = concat $ filter ((==cMove) . fst . head) possCmoves
-    let board'' = flipCells WhiteP board' cFlips
+    let (eval, cMove) = maxMove WhiteP board'
+    print $ "I choose: " ++ idxToAlg (getFstIdx cMove) ++ "!"
+    print $ "Eval: " ++ show eval
+    let board'' = flipCells WhiteP board' cMove
     showBoard board''
 
     -- let newBoard = flipCells BlackP initialBoard move
@@ -392,12 +419,26 @@ tmove2 = flipCells WhiteP tmove1 (head $ allDirectionPlays WhiteP tmove1)
 tmove3 :: Board
 tmove3 = flipCells BlackP tmove2 (head $ allDirectionPlays BlackP tmove2)
 
+testMoves :: Int -> Board -> [(Board, Player, Maybe Int)]
 testMoves n board = take (n + 1) $ iterate nextMove (board, BlackP, Nothing)
   where
     nextMove (b, player, _) =
       case allDirectionPlays player b of
         (move : _) -> (flipCells player b move, switchP player, Just (fst $ head move))
         []         -> (b, switchP player, Nothing)  -- Skip if no valid move
+
+testWeights :: Int -> Board -> [(Board, Player, Maybe Int)]
+testWeights n board = take (n + 1) $ iterate nextMove (board, BlackP, Nothing)
+  where
+    nextMove (b, player, _) = 
+      let (eval, best) = maxMove player b
+          b' = flipCells player b best in
+      case best of
+        [] -> (b', switchP player, Nothing)
+        _  -> (b', switchP player, Just $ getFstIdx best)
+      -- (b', switchP player, Just $ getFstIdx best)
+      -- Need to handle empty list!
+      
 
 -- a board with flips in multiple directions, for example black c1
 edgeBoard :: Board
