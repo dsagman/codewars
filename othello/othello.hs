@@ -40,6 +40,9 @@ data Neighbors = Neighbors
     , diagSW :: BoardIdx
   } deriving (Show)
 
+data Score = Score {blackS :: Int, whiteS :: Int}
+  deriving (Show)
+
 ---------------------------------------------
 --
 --          Board setup and indexing
@@ -229,6 +232,49 @@ setCell :: Player -> Int -> Board -> Board
 setCell player cell board = before ++ isP player : after
     where (before, _ : after) = splitAt cell board
 
+--------------------------------
+--          
+--          Position Evaluation functions
+--
+--------------------------------
+
+---------------------------------------------
+-- getScore is O(n) because it makes a single pass through the board
+---------------------------------------------
+getScore :: Board -> Score
+getScore = foldr acc (Score 0 0) 
+    where 
+      acc Black (Score b w) = Score (b+1) w
+      acc White (Score b w) = Score b (w+1)
+      acc _ s = s
+
+---------------------------------------------
+-- weights from https://github.com/norvig/paip-lisp/blob/main/docs/chapter18.md
+---------------------------------------------
+weights :: [Int]
+weights = [
+          120, -20, 20,  5,  5, 20, -20, 120, 
+          -20, -40, -5, -5, -5, -5, -40, -20, 
+           20,  -5, 15,  3,  3, 15,  -5,  20, 
+            5,  -5,  3,  3,  3,  3,  -5,   5, 
+            5,  -5,  3,  3,  3,  3,  -5,   5, 
+           20,  -5, 15,  3,  3, 15,  -5,  20, 
+          -20, -40, -5, -5, -5, -5, -40, -20, 
+          120, -20, 20,  5,  5, 20, -20, 120
+          ]
+
+---------------------------------------------
+-- getWeightedScore is O(n) because it makes a single pass through the board
+---------------------------------------------
+getWeightedScore :: Player -> Board -> Int
+getWeightedScore player board = 
+    foldr acc 0 $ zip board weights
+    where 
+      acc (c, w) s 
+        | c == isP player = s + w 
+        | c == opP player = s - w
+        | otherwise = s
+
 ---------------------------------------------
 --
 --          Main function
@@ -290,9 +336,8 @@ showBoard board = do
     putStrLn "  a b c d e f g h"
     mapM_ putStrLn (zipWith showRow [1..] (chunksOf boardN board))
     putStrLn "  a b c d e f g h"
-    let blackCount = length (filter (== Black) board)
-    let whiteCount = length (filter (== White) board)
-    putStrLn $ "  Black: " ++ show blackCount ++ " White: " ++ show whiteCount
+    let score = getScore board
+    putStrLn $ "  Black: " ++ show (blackS score)  ++ " White: " ++ show (whiteS score) 
     putStrLn ""
   where
     showRow rowIndex xs = show rowIndex ++ " " ++ unwords (map show xs) ++ " " ++ show rowIndex -- Row number
