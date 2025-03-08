@@ -45,6 +45,9 @@ boardIdx = zip [0..boardN*boardN-1]
 idxToAlg :: Int -> String
 idxToAlg idx = [toEnum (97 + (idx `mod` boardN)), toEnum (49 + (idx `div` boardN))]
 
+algToIdx :: String -> Int
+algToIdx [c1, c2] = (fromEnum c2 - 49) * boardN + (fromEnum c1 - 97)
+
 -- The board is a single linked list from 0 to 63
 -- Algebraic notation (als chess) is used to identify the cells
 -- e.g., a1 is 0, h8 is 63
@@ -220,11 +223,43 @@ testMoves n board = take (n + 1) $ iterate nextMove (board, BlackP, Nothing)
         (move : _) -> (flipCells player b move, switchP player, Just (fst $ head move))
         []         -> (b, switchP player, Nothing)  -- Skip if no valid move
 
+edgeBoard :: Board
+edgeBoard = do
+  let b = foldr (setCell BlackP) initialBoard blackCells
+  let w = foldr (setCell WhiteP) b whiteCells
+  w
+
+  where blackCells = [16,17,18,19,20,21,22,23]
+        whiteCells = [8,9,10,11,12,13,14,15]
+
 
 main :: IO ()
 main = do
-    putStrLn "Hello, Haskell!"
-    mapM_ printMove (testMoves 5 initialBoard)
+    putStrLn "Let's Play Othello!"
+    showBoard edgeBoard
+    putStrLn "Your move!"
+    hMoveAlg <- getLine
+    -- need to handle failure
+    let hMove = algToIdx hMoveAlg
+    print hMove
+    let possHmoves = possiblePlays BlackP edgeBoard
+    -- make sure we get all possible directions and concat them
+    let hFlips = concat $ filter ((==hMove) . fst . head) possHmoves 
+    print hFlips
+    let board' = flipCells BlackP edgeBoard hFlips
+    showBoard board'
+    -- do a computer play
+    -- for the selected move
+    let cMove = fst. head . head $ possiblePlays WhiteP board'
+    print $ "I choose: " ++ idxToAlg cMove ++ "!"
+    -- make sure to get all possible directions and concat them 
+    let possCmoves = possiblePlays WhiteP board'
+    let cFlips = concat $ filter ((==cMove) . fst . head) possCmoves
+    let board'' = flipCells WhiteP board' cFlips
+    showBoard board''
+
+    -- let newBoard = flipCells BlackP initialBoard move
+    -- mapM_ printMove (testMoves 5 initialBoard)
     putStrLn "So much left to do"
   
 printMove :: (Board, Player, Maybe Int) -> IO ()
