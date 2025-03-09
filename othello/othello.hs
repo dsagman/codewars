@@ -1,13 +1,17 @@
+---------------------------------------------
+--
 -- Othello in Haskell
+-- David Silverman github.com/dsagman
 -- With much help from:
 -- Peter Norvig's Paradigms of Artificial Intelligence Programming, 1992
 -- https://github.com/norvig/paip-lisp/blob/main/docs/chapter18.md
 -- StackOverflow, copilot, chatGPT
+--
+---------------------------------------------
 
 module Main where
-import Data.List.Extra
-import Data.Maybe
-
+import Data.List.Extra ( nub, chunksOf )
+import Data.Maybe ( mapMaybe )
 
 ---------------------------------------------
 --
@@ -235,11 +239,11 @@ setCell :: Player -> Int -> Board -> Board
 setCell player cell board = before ++ isP player : after
     where (before, _ : after) = splitAt cell board
 
---------------------------------
+---------------------------------------------
 --          
 --          Position Evaluation functions
 --
---------------------------------
+---------------------------------------------
 
 ---------------------------------------------
 -- getScore is O(n) because it makes a single pass through the board
@@ -267,10 +271,10 @@ weights = [
           ]
 
 ---------------------------------------------
--- getWeightedScore is O(n) because it makes a single pass through the board
+-- evalWeights is O(n) because it makes a single pass through the board
 ---------------------------------------------
-getWeightedScore :: Player -> Board -> Int
-getWeightedScore player board = 
+evalWeights :: Player -> Board -> Int
+evalWeights player board = 
     foldr acc 0 $ zip board weights
     where 
       acc (c, w) s 
@@ -278,61 +282,52 @@ getWeightedScore player board =
         | c == opP player = s - w
         | otherwise = s
 
-
 ---------------------------------------------
---
---          Minimax functions
---
+-- maxMove is uses evalWeights to find the best move
+-- Returns the best move and the evaluation
+-- no valid move returns (0, [])
 ---------------------------------------------
--- minimax :: Player -> Board -> Int
--- minimax player board = do
---     let possMoves = allDirectionPlays player board
---     let scores = map (minimax' (switchP player) . flipCells player board) possMoves
---     if null scores then getWeightedScore player board else maximum scores
-
--- minimax' :: Player -> Board -> Int
--- minimax' player board = do
---     let possMoves = allDirectionPlays player board
---     let scores = map (minimax (switchP player) . flipCells player board) possMoves
---     if null scores then getWeightedScore player board else minimum scores
-
 maxMove :: Player -> Board -> (Int, BoardIdx)
 maxMove player board = do
     let validMoves = allDirectionPlays player board
-    let scores = map (getWeightedScore player . flipCells player board) validMoves
-    foldr1 acc (zip scores validMoves)
+    let scores = map (evalWeights player . flipCells player board) validMoves
+    foldr acc (minBound :: Int,[]) (zip scores validMoves)
     where acc (w, ms) (w', ms') = if w > w' then (w, ms) else (w', ms')
-    --- TODO: Have to fix to handle no valid moves
-
 
 ---------------------------------------------
---
---          Main function
+-- 
+--          Game loop
 --
 ---------------------------------------------
-
-main :: IO ()
-main = do
-    putStrLn "Let's Play Othello!"
-    showBoard edgeBoard
-    putStrLn "Your move!"
-    let possHmoves = allDirectionPlays BlackP edgeBoard
-    hMove <- getInput possHmoves
-    print hMove
-    let hFlips = concat $ filter ((==hMove) . getFstIdx) possHmoves
-    print hFlips
-    let board' = flipCells BlackP edgeBoard hFlips
-    showBoard board'
-    -- do a computer play
-    let (eval, cMove) = maxMove WhiteP board'
-    print $ "I choose: " ++ idxToAlg (getFstIdx cMove) ++ "!"
-    print $ "Eval: " ++ show eval
-    let board'' = flipCells WhiteP board' cMove
-    showBoard board''
-
-    -- let newBoard = flipCells BlackP initialBoard move
-    -- mapM_ printMove (testMoves 5 initialBoard)
-    putStrLn "So much left to do"
+gameLoop :: Board -> IO ()
+gameLoop board = do
+    showBoard board
+    -- user inputs a move as black
+    let possHmoves = allDirectionPlays BlackP board
+    if  (not . null) possHmoves then do
+        putStrLn "Your move!"
+        hMove <- getInput possHmoves
+        print hMove
+        let hFlips = concat $ filter ((==hMove) . getFstIdx) possHmoves
+        print hFlips
+        let board' = flipCells BlackP board hFlips
+        showBoard board'
+    -- computer responds as white
+        let (eval, cMove) = maxMove WhiteP board'
+        if (not . null) cMove then do
+            print $ "I choose: " ++ idxToAlg (getFstIdx cMove) ++ "!"
+            print $ "Eval: " ++ show eval
+            let board'' = flipCells WhiteP board' cMove
+            gameLoop board''
+        else do
+            putStrLn "No valid move for me!"
+            gameLoop board'
+    else do
+        let score = getScore board
+        putStrLn $ "Game Over! Final Score: Black" 
+          ++ show (blackS score) 
+          ++ " White: " 
+          ++ show (whiteS score) 
 
 ---------------------------------------------
 --
@@ -340,6 +335,10 @@ main = do
 --
 ---------------------------------------------
 
+
+---------------------------------------------
+-- getInput is given a list of legal moves as a parameter
+---------------------------------------------
 getInput :: [BoardIdx] -> IO Int
 getInput legalMoves = do
     putStrLn "Enter a move (e.g., a1):"
@@ -348,6 +347,10 @@ getInput legalMoves = do
         Just i -> return i
         Nothing -> putStrLn "Invalid move" >> getInput legalMoves
 
+---------------------------------------------
+-- parseInput looks for the move to be in the correct form and
+-- legal based on the parameter passed of legal moves
+---------------------------------------------
 parseInput :: String -> [BoardIdx] -> Maybe Int
 parseInput s legalMoves =
   if length s == 2 &&
@@ -357,6 +360,9 @@ parseInput s legalMoves =
     then Just $ algToIdx s
     else Nothing
 
+---------------------------------------------
+--  showBoard shows the board. obviously.
+---------------------------------------------
 showBoard :: Board -> IO ()
 showBoard board = do
     putStrLn ""
@@ -369,9 +375,25 @@ showBoard board = do
   where
     showRow rowIndex xs = show rowIndex ++ " " ++ unwords (map show xs) ++ " " ++ show rowIndex -- Row number
 
+
 ---------------------------------------------
 --
---        Debugging functions
+--          Main function
+--
+---------------------------------------------
+
+main :: IO ()
+main = do
+    putStrLn "Let's Play Othello!"
+    gameLoop initialBoard
+    -- mapM_ printMove (testMoves 5 initialBoard) -- test computer plays itself
+    putStrLn "TO DO: depth search, alpha-beta pruning"
+
+
+
+---------------------------------------------
+--
+--        Debugging stuff
 --
 ---------------------------------------------
 
@@ -397,7 +419,7 @@ printMove (board, player, idx) = do
 
 ---------------------------------------------
 --
---          Tests
+--          Test cases
 --
 ---------------------------------------------
 
@@ -436,9 +458,6 @@ testWeights n board = take (n + 1) $ iterate nextMove (board, BlackP, Nothing)
       case best of
         [] -> (b', switchP player, Nothing)
         _  -> (b', switchP player, Just $ getFstIdx best)
-      -- (b', switchP player, Just $ getFstIdx best)
-      -- Need to handle empty list!
-      
 
 -- a board with flips in multiple directions, for example black c1
 edgeBoard :: Board
