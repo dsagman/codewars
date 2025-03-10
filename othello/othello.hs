@@ -54,7 +54,7 @@ data Score = Score {blackS :: Int, whiteS :: Int}
 ---------------------------------------------
 
 -- The board is a single linked list from 0 to 63
--- Algebraic notation (als chess) is used to identify the cells
+-- Algebraic notation (ala chess) is used to identify the cells
 -- e.g., a1 is 0, h8 is 63
 
 --           a  b  c  d  e  f  g  h
@@ -116,7 +116,7 @@ switchP WhiteP = BlackP
 
 ---------------------------------------------
 -- neighbors finds all of the pieces in all of directions from a given index
--- Efficient because it makes a single pass through the entire board
+-- O(n) because it makes a single pass through the entire board
 --      and fills in all the direction records in one go
 ---------------------------------------------
 neighbors :: Int -> Board -> Neighbors
@@ -307,16 +307,16 @@ gameLoop board = do
     if  (not . null) possHmoves then do
         putStrLn "Your move!"
         hMove <- getInput possHmoves
-        print hMove
+        print hMove -- debugging
         let hFlips = concat $ filter ((==hMove) . getFstIdx) possHmoves
-        print hFlips
+        print hFlips -- debugging
         let board' = flipCells BlackP board hFlips
         showBoard board'
     -- computer responds as white
         let (eval, cMove) = maxMove WhiteP board'
         if (not . null) cMove then do
             print $ "I choose: " ++ idxToAlg (getFstIdx cMove) ++ "!"
-            print $ "Eval: " ++ show eval
+            print $ "Eval: " ++ show eval -- debugging
             let board'' = flipCells WhiteP board' cMove
             gameLoop board''
         else do
@@ -385,9 +385,11 @@ showBoard board = do
 main :: IO ()
 main = do
     putStrLn "Let's Play Othello!"
+    putStrLn "You get the black pieces and I get the white ones."
+    putStrLn "You go first!"
     gameLoop initialBoard
     -- mapM_ printMove (testMoves 5 initialBoard) -- test computer plays itself
-    putStrLn "TO DO: depth search, alpha-beta pruning"
+    putStrLn "TO DO: min-max depth search, alpha-beta pruning"
 
 
 
