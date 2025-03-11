@@ -226,6 +226,9 @@ allDirectionPlays player board = do
 -- flipCells assumes the move is valid
 -- Flips all the cells in the list of cells
 -- use with allDirectionPlays
+--
+-- TODO: Rewrite to flip all pieces at once rather than one-by-one
+--
 ---------------------------------------------
 flipCells :: Player -> Board -> BoardIdx -> Board
 flipCells player = foldr (setCell player . fst)
@@ -293,6 +296,9 @@ maxMove player board = do
     let scores = map (evalWeights player . flipCells player board) validMoves
     foldr acc (minBound :: Int,[]) (zip scores validMoves)
     where acc (w, ms) (w', ms') = if w > w' then (w, ms) else (w', ms')
+
+-- TODO: Minmax depth search
+
 
 ---------------------------------------------
 -- 
