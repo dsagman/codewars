@@ -319,6 +319,11 @@ depthSearch depth player board = do
       let evals = map (maximum . map fst) nextMoves
       zip evals validMoves
 
+-- TODO: Minmax depth search see below todo
+-- TODO: I don't think I am doing depth search right. It should choose max at the bottom ply 
+-- and then flow up to each ply. Right now I'm getting the full list at the bottom ply. 
+-- Should maybe use max1ply for the base case and each one above does basically the same
+
 ---------------------------------------------
 -- maxDepthSearch is brute force full search 
 -- uses depthSearch
@@ -329,7 +334,6 @@ maxDepthSearch depth player board = do
     foldr acc (minBound :: Int,[]) (depthSearch depth player board)
     where acc (w, ms) (w', ms') = if w > w' then (w, ms) else (w', ms')
 
--- TODO: Minmax depth search
 
 ---------------------------------------------
 -- 
