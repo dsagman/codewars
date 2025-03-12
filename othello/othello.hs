@@ -12,6 +12,8 @@
 module Main where
 import Data.List.Extra ( nub, chunksOf )
 import Data.Maybe ( mapMaybe )
+import Text.Read ( readMaybe )
+import Data.Time.Clock ( getCurrentTime, diffUTCTime )
 
 ---------------------------------------------
 --
@@ -69,7 +71,7 @@ data Score = Score {blackS :: Int, whiteS :: Int}
 --      8 | 56 57 58 59 60 61 62 63
 
 boardN :: Int
-boardN = 8 
+boardN = 8
 
 boardIdx :: Board -> BoardIdx
 boardIdx = zip [0..boardN*boardN-1]
@@ -179,7 +181,7 @@ possiblePlays player board = do
     let flipList = takeWhile ((/= isP player) . snd) ns
     pure flipList
     where ens = emptyNeighbors board
-    
+
 ---------------------------------------------
 -- Function to find neighbor lists that start with opponet's piece
 -- This means we can flip pieces in that direction
@@ -227,8 +229,8 @@ allDirectionPlays player board = do
 -- Flips all the cells in the list of cells
 -- use with allDirectionPlays
 --
--- TODO: Rewrite to flip all pieces at once rather than one-by-one
---
+-- Have to do one at a time because flipped cells
+-- are not (necessarily) adjacent in linked list
 ---------------------------------------------
 flipCells :: Player -> Board -> BoardIdx -> Board
 flipCells player = foldr (setCell player . fst)
@@ -252,8 +254,8 @@ setCell player cell board = before ++ isP player : after
 -- getScore is O(n) because it makes a single pass through the board
 ---------------------------------------------
 getScore :: Board -> Score
-getScore = foldr acc (Score 0 0) 
-    where 
+getScore = foldr acc (Score 0 0)
+    where
       acc Black (Score b w) = Score (b+1) w
       acc White (Score b w) = Score b (w+1)
       acc _ s = s
@@ -263,13 +265,13 @@ getScore = foldr acc (Score 0 0)
 ---------------------------------------------
 weights :: [Int]
 weights = [
-          120, -20, 20,  5,  5, 20, -20, 120, 
-          -20, -40, -5, -5, -5, -5, -40, -20, 
-           20,  -5, 15,  3,  3, 15,  -5,  20, 
-            5,  -5,  3,  3,  3,  3,  -5,   5, 
-            5,  -5,  3,  3,  3,  3,  -5,   5, 
-           20,  -5, 15,  3,  3, 15,  -5,  20, 
-          -20, -40, -5, -5, -5, -5, -40, -20, 
+          120, -20, 20,  5,  5, 20, -20, 120,
+          -20, -40, -5, -5, -5, -5, -40, -20,
+           20,  -5, 15,  3,  3, 15,  -5,  20,
+            5,  -5,  3,  3,  3,  3,  -5,   5,
+            5,  -5,  3,  3,  3,  3,  -5,   5,
+           20,  -5, 15,  3,  3, 15,  -5,  20,
+          -20, -40, -5, -5, -5, -5, -40, -20,
           120, -20, 20,  5,  5, 20, -20, 120
           ]
 
@@ -277,63 +279,99 @@ weights = [
 -- evalWeights is O(n) because it makes a single pass through the board
 ---------------------------------------------
 evalWeights :: Player -> Board -> Int
-evalWeights player board = 
+evalWeights player board =
     foldr acc 0 $ zip board weights
-    where 
-      acc (c, w) s 
-        | c == isP player = s + w 
+    where
+      acc (c, w) s
+        | c == isP player = s + w
         | c == opP player = s - w
         | otherwise = s
 
 ---------------------------------------------
--- maxMove is uses evalWeights to find the best move
+-- max1ply is uses evalWeights to find the best move
+
 -- Returns the best move and the evaluation
 -- no valid move returns (0, [])
 ---------------------------------------------
-maxMove :: Player -> Board -> (Int, BoardIdx)
-maxMove player board = do
+max1ply :: Player -> Board -> (Int, BoardIdx)
+max1ply player board = do
     let validMoves = allDirectionPlays player board
     let scores = map (evalWeights player . flipCells player board) validMoves
     foldr acc (minBound :: Int,[]) (zip scores validMoves)
     where acc (w, ms) (w', ms') = if w > w' then (w, ms) else (w', ms')
 
--- TODO: Minmax depth search
+---------------------------------------------
+-- depthSearch is a depth first search of possible moves
+-- Returns a list of possible moves and the max at each ply
+-- (remember evalWeights takes into account the player, so no need to negate evals)
+---------------------------------------------
+depthSearch :: Int -> Player -> Board -> [(Int, BoardIdx)]
+depthSearch 0 player board = do
+      let validMoves = allDirectionPlays player board
+      let scores = map (evalWeights player . flipCells player board) validMoves
+      zip scores validMoves
+depthSearch depth player board = do
+      let validMoves = allDirectionPlays player board
+      let scores = map (evalWeights player . flipCells player board) validMoves
+      let scoreMoves = zip scores validMoves
+      let nextMoves = map (\(s, m) -> depthSearch (depth-1) (switchP player) (flipCells player board m)) scoreMoves
+      -- let evals = map (foldr (\(s, _) s' -> s + s') 0) nextMoves
+      let evals = map (maximum . map fst) nextMoves
+      zip evals validMoves
 
+---------------------------------------------
+-- maxDepthSearch is brute force full search 
+-- uses depthSearch
+-- don't go beyond 3 or 4!
+---------------------------------------------
+maxDepthSearch :: Int -> Player -> Board -> (Int, BoardIdx)
+maxDepthSearch depth player board = do
+    foldr acc (minBound :: Int,[]) (depthSearch depth player board)
+    where acc (w, ms) (w', ms') = if w > w' then (w, ms) else (w', ms')
+
+-- TODO: Minmax depth search
 
 ---------------------------------------------
 -- 
 --          Game loop
 --
 ---------------------------------------------
-gameLoop :: Board -> IO ()
-gameLoop board = do
+gameLoop :: Int -> Board -> IO ()
+gameLoop depth board = do
     showBoard board
     -- user inputs a move as black
     let possHmoves = allDirectionPlays BlackP board
     if  (not . null) possHmoves then do
         putStrLn "Your move!"
-        hMove <- getInput possHmoves
+        hMove <- getMove possHmoves
         print hMove -- debugging
         let hFlips = concat $ filter ((==hMove) . getFstIdx) possHmoves
         print hFlips -- debugging
         let board' = flipCells BlackP board hFlips
         showBoard board'
     -- computer responds as white
-        let (eval, cMove) = maxMove WhiteP board'
+        sTime <- getCurrentTime
+        let (eval, cMove) = maxDepthSearch depth WhiteP board'
         if (not . null) cMove then do
             print $ "I choose: " ++ idxToAlg (getFstIdx cMove) ++ "!"
+            eTime <- getCurrentTime
+            let timeDiff = round2 $ diffUTCTime eTime sTime
+            print $ "I thought for " ++ show timeDiff ++ " seconds."
             print $ "Eval: " ++ show eval -- debugging
             let board'' = flipCells WhiteP board' cMove
-            gameLoop board''
+            gameLoop depth board''
         else do
             putStrLn "No valid move for me!"
-            gameLoop board'
+            gameLoop depth board'
     else do
         let score = getScore board
-        putStrLn $ "Game Over! Final Score: Black" 
-          ++ show (blackS score) 
-          ++ " White: " 
-          ++ show (whiteS score) 
+        putStrLn $ "Game Over! Final Score: Black"
+          ++ show (blackS score)
+          ++ " White: "
+          ++ show (whiteS score)
+
+round2 :: (RealFrac a1, Fractional a2) => a1 -> a2
+round2 x = fromInteger (round $ x * 100) / 100
 
 ---------------------------------------------
 --
@@ -341,24 +379,33 @@ gameLoop board = do
 --
 ---------------------------------------------
 
+getDepth :: IO Int
+getDepth = do
+    putStrLn "Pick a number from 1 to 4, with 1 being the easiest."
+    inputLine <- getLine
+    maybe getDepth pure (parseDepth inputLine)
+
+parseDepth :: String -> Maybe Int
+parseDepth xs =
+  if length xs == 1 && elem (head xs) ['1'..'4'] then Just (read xs) else Nothing
 
 ---------------------------------------------
--- getInput is given a list of legal moves as a parameter
+-- getMove is given a list of legal moves as a parameter
 ---------------------------------------------
-getInput :: [BoardIdx] -> IO Int
-getInput legalMoves = do
+getMove :: [BoardIdx] -> IO Int
+getMove legalMoves = do
     putStrLn "Enter a move (e.g., a1):"
     inputLine <- getLine
-    case parseInput inputLine legalMoves of
-        Just i -> return i
-        Nothing -> putStrLn "Invalid move" >> getInput legalMoves
+    case parseMove inputLine legalMoves of
+        Just i -> pure i
+        Nothing -> putStrLn "Invalid move" >> getMove legalMoves
 
 ---------------------------------------------
--- parseInput looks for the move to be in the correct form and
+-- parseMove looks for the move to be in the correct form and
 -- legal based on the parameter passed of legal moves
 ---------------------------------------------
-parseInput :: String -> [BoardIdx] -> Maybe Int
-parseInput s legalMoves =
+parseMove :: String -> [BoardIdx] -> Maybe Int
+parseMove s legalMoves =
   if length s == 2 &&
     all (`elem` ['a'..'h']) (take 1 s) &&
     all (`elem` ['1'..'8']) (drop 1 s) &&
@@ -376,7 +423,7 @@ showBoard board = do
     mapM_ putStrLn (zipWith showRow [1..] (chunksOf boardN board))
     putStrLn "  a b c d e f g h"
     let score = getScore board
-    putStrLn $ "  Black: " ++ show (blackS score)  ++ " White: " ++ show (whiteS score) 
+    putStrLn $ "  Black: " ++ show (blackS score)  ++ " White: " ++ show (whiteS score)
     putStrLn ""
   where
     showRow rowIndex xs = show rowIndex ++ " " ++ unwords (map show xs) ++ " " ++ show rowIndex -- Row number
@@ -391,9 +438,12 @@ showBoard board = do
 main :: IO ()
 main = do
     putStrLn "Let's Play Othello!"
+    putStrLn ""
+    putStrLn "Before we start, how hard do you want me to think?"
+    depth <- getDepth
     putStrLn "You get the black pieces and I get the white ones."
     putStrLn "You go first!"
-    gameLoop initialBoard
+    gameLoop depth initialBoard
     -- mapM_ printMove (testMoves 5 initialBoard) -- test computer plays itself
     putStrLn "TO DO: min-max depth search, alpha-beta pruning"
 
@@ -460,8 +510,8 @@ testMoves n board = take (n + 1) $ iterate nextMove (board, BlackP, Nothing)
 testWeights :: Int -> Board -> [(Board, Player, Maybe Int)]
 testWeights n board = take (n + 1) $ iterate nextMove (board, BlackP, Nothing)
   where
-    nextMove (b, player, _) = 
-      let (eval, best) = maxMove player b
+    nextMove (b, player, _) =
+      let (eval, best) = max1ply player b
           b' = flipCells player b best in
       case best of
         [] -> (b', switchP player, Nothing)
